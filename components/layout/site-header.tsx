@@ -2,7 +2,8 @@
 
 import { signOut } from "next-auth/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AccountMenu } from "@/components/layout/account-menu";
 
 type HeaderAccount = {
@@ -52,12 +53,37 @@ const dmLinks = [
 
 export function SiteHeader({ account, notificationCount, showDmTools, variant }: SiteHeaderProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const pathname = usePathname();
   const logoHref = variant === "app" || account ? "/dashboard" : "/";
   const drawerLinks = variant === "app" ? appLinks : [{ href: "/", label: "Home" }, ...publicLinks];
   const desktopLinks = variant === "app" ? appLinks.slice(0, 7) : publicLinks;
 
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [drawerOpen]);
+
+  function isActive(href: string) {
+    const path = href.split("#")[0];
+    if (path === "/") return pathname === "/";
+    return pathname === path || pathname.startsWith(`${path}/`);
+  }
+
+  function drawerLinkClass(href: string) {
+    return [
+      "block rounded-md px-3 py-3 text-base font-medium transition",
+      isActive(href)
+        ? "border border-aureate/25 bg-aureate/10 text-aureate"
+        : "border border-transparent text-zinc-100 hover:border-white/10 hover:bg-white/5 hover:text-white"
+    ].join(" ");
+  }
+
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-void/92 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#08070c]/95 backdrop-blur">
       <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 sm:px-5 md:h-auto md:py-3">
         <button
           aria-label="Open navigation menu"
@@ -106,55 +132,63 @@ export function SiteHeader({ account, notificationCount, showDmTools, variant }:
       </nav>
 
       {drawerOpen ? (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <button className="absolute inset-0 bg-black/60" aria-label="Close navigation menu" type="button" onClick={() => setDrawerOpen(false)} />
-          <aside className="absolute left-0 top-0 flex h-full w-[82vw] max-w-80 flex-col border-r border-white/10 bg-[#0f0e15] p-4 shadow-2xl shadow-black/50">
+        <>
+          <button
+            className="fixed inset-0 z-40 bg-black/75 backdrop-blur-sm md:hidden"
+            aria-label="Close navigation menu"
+            type="button"
+            onClick={() => setDrawerOpen(false)}
+          />
+          <aside className="fixed left-0 top-0 z-50 flex h-[100dvh] w-[min(85vw,360px)] flex-col overflow-y-auto border-r border-aureate/20 bg-[#07070c] bg-[linear-gradient(180deg,rgba(20,18,30,0.98),rgba(7,7,12,1))] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] shadow-2xl shadow-black/70 md:hidden">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-4">
               <Link href={logoHref} className="text-sm font-semibold uppercase tracking-[0.16em] text-aureate" onClick={() => setDrawerOpen(false)}>
-                Eternum
+                Eternum Tabletop
               </Link>
-              <button className="rounded-md border border-white/10 px-3 py-2 text-sm text-zinc-300" type="button" onClick={() => setDrawerOpen(false)}>
+              <button className="rounded-md border border-white/15 bg-black/35 px-3 py-2 text-sm font-semibold text-zinc-100" type="button" onClick={() => setDrawerOpen(false)}>
                 Close
               </button>
             </div>
 
-            <div className="mt-4 grid gap-1">
+            <div className="mt-4 grid gap-2">
               {drawerLinks.map((item) => (
-                <Link key={item.href} href={item.href} className="rounded-md px-3 py-3 text-sm font-medium text-zinc-200 hover:bg-white/5" onClick={() => setDrawerOpen(false)}>
+                <Link key={item.href} href={item.href} className={drawerLinkClass(item.href)} onClick={() => setDrawerOpen(false)}>
                   {item.label}
                 </Link>
               ))}
               {!account ? (
                 <>
-                  <Link href="/login" className="rounded-md px-3 py-3 text-sm font-medium text-aureate hover:bg-aureate/10" onClick={() => setDrawerOpen(false)}>Sign In</Link>
-                  <Link href="/register" className="rounded-md bg-aureate px-3 py-3 text-sm font-semibold text-void" onClick={() => setDrawerOpen(false)}>Create Account</Link>
+                  <Link href="/login" className={drawerLinkClass("/login")} onClick={() => setDrawerOpen(false)}>Sign In</Link>
+                  <Link href="/register" className="rounded-md bg-aureate px-3 py-3 text-base font-semibold text-void shadow-md shadow-aureate/10" onClick={() => setDrawerOpen(false)}>Create Account</Link>
                 </>
-              ) : null}
-              {account ? (
-                <button
-                  className="rounded-md px-3 py-3 text-left text-sm font-medium text-crimson hover:bg-crimson/10"
-                  type="button"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                >
-                  Logout
-                </button>
               ) : null}
             </div>
 
             {account && showDmTools ? (
               <div className="mt-5 border-t border-white/10 pt-4">
                 <p className="px-3 text-xs uppercase tracking-[0.16em] text-zinc-500">DM tools</p>
-                <div className="mt-2 grid gap-1">
+                <div className="mt-3 grid gap-2">
                   {dmLinks.map((item) => (
-                    <Link key={item.label} href={item.href} className="rounded-md px-3 py-3 text-sm text-zinc-300 hover:bg-white/5 hover:text-white" onClick={() => setDrawerOpen(false)}>
+                    <Link key={item.label} href={item.href} className={drawerLinkClass(item.href)} onClick={() => setDrawerOpen(false)}>
                       {item.label}
                     </Link>
                   ))}
                 </div>
               </div>
             ) : null}
+
+            {account ? (
+              <div className="mt-auto border-t border-white/10 pt-4">
+                <button
+                  className="w-full rounded-md border border-crimson/20 bg-crimson/10 px-3 py-3 text-left text-base font-semibold text-crimson"
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                >
+                  Logout
+                </button>
+              </div>
+            ) : null}
           </aside>
-        </div>
+        </>
       ) : null}
     </header>
   );

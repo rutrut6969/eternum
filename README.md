@@ -23,6 +23,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Mobile app shell now uses a compact top bar with hamburger drawer, centered Eternum logo, and avatar/account button. Full public nav links are hidden on mobile.
 - Logged-in mobile uses the app drawer instead of the public marketing nav. Logged-out mobile drawer shows public links, sign in, and create account.
 - Mobile bottom dashboard nav was removed to prevent browser-control overlap and content coverage.
+- Mobile hamburger drawer now renders as a solid dark fixed panel with blurred backdrop overlay, safe-area padding, scroll lock, high-contrast links, active-route styling, separated DM section, and bottom logout.
 - Public and authenticated routing is server-enforced: logged-in visits to `/`, `/login`, or `/register` redirect to `/dashboard`.
 - Route-group layouts now separate public/auth chrome from the authenticated dashboard app shell. Public pages use public navigation; `/dashboard` and `/dashboard/*` use the app shell.
 - Protected dashboard routes using server-side session checks.
@@ -304,6 +305,7 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Session-aware authenticated account menu
 - [x] Logged-out Sign In/Create Account nav state
 - [x] Mobile hamburger drawer shell
+- [x] Mobile drawer solid panel/backdrop readability fix
 - [x] Logged-in mobile app shell
 - [x] Removed mobile bottom nav overlap
 - [x] Server-side redirect from `/`, `/login`, and `/register` for authenticated users
