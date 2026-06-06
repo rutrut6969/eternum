@@ -23,6 +23,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Mobile app shell now uses a compact top bar with hamburger drawer, centered Eternum logo, and avatar/account button. Full public nav links are hidden on mobile.
 - Logged-in mobile uses the app drawer instead of the public marketing nav. Logged-out mobile drawer shows public links, sign in, and create account.
 - Mobile bottom dashboard nav was removed to prevent browser-control overlap and content coverage.
+- Public and authenticated routing is server-enforced: logged-in visits to `/`, `/login`, or `/register` redirect to `/dashboard`.
+- Route-group layouts now separate public/auth chrome from the authenticated dashboard app shell. Public pages use public navigation; `/dashboard` and `/dashboard/*` use the app shell.
 - Protected dashboard routes using server-side session checks.
 - Campaign CRUD foundation: authenticated users can create campaigns, campaign creators receive DM and Player roles, DMs can edit name, description, JSON settings, and archive campaigns.
 - Campaign membership role arrays support DM, Player, Assistant DM, Spectator, and mixed-role users.
@@ -107,6 +109,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Dashboard navigation is functional and mobile-friendly, but active-route highlighting and richer notification detail views are still planned.
 - Account settings display user data, but editable profile fields and linked account management are still placeholders.
 - DM-only mobile drawer links route to the current dashboard/campaign workspaces until dedicated per-tool landing pages exist.
+- `/invite/[token]` and `/verify-email` currently use the neutral root frame while public/auth/dashboard route groups have dedicated shells.
 
 ## Known Issues
 
@@ -133,11 +136,11 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 
 1. Rerun `npm run seed:founders` when the database is reachable to promote configured founder accounts.
 2. Add dedicated DM tools routes for approvals, sessions, hidden rolls, member management, and campaign settings.
-3. Add Square checkout planning documents and webhook route stubs once billing requirements are finalized.
-4. Add active-route highlighting and richer notification detail views for the authenticated account menu.
-5. Wire the AI map generation service call and Blob save path behind the new map prompt/image models.
-6. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
-7. Add realtime transport behind `eventBus` for activity, dice, and session updates.
+3. Add dedicated shell treatment for invite and verify-email standalone routes if they should share public chrome.
+4. Add Square checkout planning documents and webhook route stubs once billing requirements are finalized.
+5. Add active-route highlighting and richer notification detail views for the authenticated account menu.
+6. Wire the AI map generation service call and Blob save path behind the new map prompt/image models.
+7. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
 
 ## Setup
 
@@ -303,6 +306,9 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Mobile hamburger drawer shell
 - [x] Logged-in mobile app shell
 - [x] Removed mobile bottom nav overlap
+- [x] Server-side redirect from `/`, `/login`, and `/register` for authenticated users
+- [x] Separate public/auth/app route-group layouts
+- [x] Public shell no longer wraps dashboard routes
 - [x] Subtle global Obsidian Systems LLC footer branding
 - [x] Verification gates for campaign creation and public publishing
 - [x] Dashboard route protection
@@ -393,6 +399,7 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Richer notification inbox/details
 - [ ] Dedicated DM tools landing pages
 - [ ] Rerun founder seed against reachable database
+- [ ] Optional public shell for invite and email verification standalone routes
 
 ### Planned
 

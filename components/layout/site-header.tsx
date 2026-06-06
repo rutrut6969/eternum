@@ -1,5 +1,6 @@
 "use client";
 
+import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { useState } from "react";
 import { AccountMenu } from "@/components/layout/account-menu";
@@ -15,6 +16,7 @@ type SiteHeaderProps = {
   account: HeaderAccount | null;
   notificationCount: number;
   showDmTools: boolean;
+  variant: "public" | "app";
 };
 
 const publicLinks = [
@@ -48,10 +50,11 @@ const dmLinks = [
   { href: "/dashboard/campaigns", label: "Campaign Settings" }
 ];
 
-export function SiteHeader({ account, notificationCount, showDmTools }: SiteHeaderProps) {
+export function SiteHeader({ account, notificationCount, showDmTools, variant }: SiteHeaderProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const logoHref = account ? "/dashboard" : "/";
-  const drawerLinks = account ? appLinks : publicLinks;
+  const logoHref = variant === "app" || account ? "/dashboard" : "/";
+  const drawerLinks = variant === "app" ? appLinks : [{ href: "/", label: "Home" }, ...publicLinks];
+  const desktopLinks = variant === "app" ? appLinks.slice(0, 7) : publicLinks;
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-void/92 backdrop-blur">
@@ -74,7 +77,7 @@ export function SiteHeader({ account, notificationCount, showDmTools }: SiteHead
         </Link>
 
         <div className="hidden items-center justify-end gap-2 text-sm text-zinc-300 md:flex">
-          {(account ? appLinks.slice(0, 7) : publicLinks).map((item) => (
+          {desktopLinks.map((item) => (
             <Link key={item.href} href={item.href} className="rounded-md px-3 py-2 hover:bg-white/5 hover:text-white">
               {item.label}
             </Link>
@@ -126,6 +129,15 @@ export function SiteHeader({ account, notificationCount, showDmTools }: SiteHead
                   <Link href="/login" className="rounded-md px-3 py-3 text-sm font-medium text-aureate hover:bg-aureate/10" onClick={() => setDrawerOpen(false)}>Sign In</Link>
                   <Link href="/register" className="rounded-md bg-aureate px-3 py-3 text-sm font-semibold text-void" onClick={() => setDrawerOpen(false)}>Create Account</Link>
                 </>
+              ) : null}
+              {account ? (
+                <button
+                  className="rounded-md px-3 py-3 text-left text-sm font-medium text-crimson hover:bg-crimson/10"
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                >
+                  Logout
+                </button>
               ) : null}
             </div>
 

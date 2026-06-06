@@ -1,9 +1,15 @@
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
 import { Card } from "@/components/ui/card";
+import { authOptions } from "@/lib/auth/options";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const session = await getServerSession(authOptions);
+  if (session?.user?.id) redirect("/dashboard");
+
   return (
     <main className="mx-auto grid min-h-[calc(100vh-73px)] max-w-md items-center px-5 py-12">
       <Card>

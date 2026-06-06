@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ResourceBars } from "@/components/resource-bars";
+import { authOptions } from "@/lib/auth/options";
 import { calculateMana, calculateStamina } from "@/lib/rules/resources";
 
 const demoScores = { str: 14, dex: 12, con: 15, int: 16, wis: 13, cha: 10 };
@@ -13,7 +16,10 @@ const pillars = [
   ["Saved Content", "Approved material becomes private campaign content or public homebrew library entries."]
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getServerSession(authOptions);
+  if (session?.user?.id) redirect("/dashboard");
+
   const mana = calculateMana(5, demoScores, "INT");
   const stamina = calculateStamina(5, demoScores);
 
