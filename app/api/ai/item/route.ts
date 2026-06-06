@@ -1,17 +1,16 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { spellSystemPrompt } from "@/lib/ai/prompts";
+import { itemSystemPrompt } from "@/lib/ai/prompts";
 import { getOpenAIClient, openAIModel } from "@/lib/ai/openai";
 import { authOptions } from "@/lib/auth/options";
 import { requireCampaignMember } from "@/lib/campaign-auth";
 import { slugForHomebrew } from "@/lib/homebrew";
 import { prisma } from "@/lib/prisma";
-import { calculateInfusedSpell, deriveTierFromMana } from "@/lib/rules/spells";
+import { validateItemPower } from "@/lib/rules/items";
 
 const schema = z.object({
   idea: z.string().min(20).max(4000),
-  baseManaIntent: z.number().int().min(1).max(120).default(5),
   campaignId: z.string().cuid().optional(),
   characterId: z.string().cuid().optional(),
   submitForReview: z.boolean().default(true)
@@ -23,7 +22,7 @@ export async function POST(request: Request) {
   const userId = session.user.id;
 
   const parsed = schema.safeParse(await request.json());
-  if (!parsed.success) return NextResponse.json({ error: "Invalid spell idea." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid item idea." }, { status: 400 });
 
   if (parsed.data.campaignId) {
     try {
@@ -38,34 +37,35 @@ export async function POST(request: Request) {
     model: openAIModel,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: spellSystemPrompt },
+      { role: "system", content: itemSystemPrompt },
       { role: "user", content: parsed.data.idea }
     ]
   });
 
   const formatted = JSON.parse(completion.choices[0]?.message.content || "{}");
-  const baseTier = deriveTierFromMana(parsed.data.baseManaIntent);
-  const rules = {
-    ...calculateInfusedSpell(baseTier, []),
-    concentrationCost: formatted.duration && String(formatted.duration).toLowerCase().includes("concentration") ? Math.max(1, baseTier) : 0,
-    infusionOptions: formatted.infusionIdeas ?? []
-  };
-
-  const title = String(formatted.name || "Custom Spell");
+  const rules = validateItemPower({
+    rarity: String(formatted.rarity || "common"),
+    stats: formatted.stats,
+    attunementRequired: Boolean(formatted.attunementRequired)
+  });
+  const title = String(formatted.name || "Custom Item");
   const homebrew = await prisma.homebrewContent.create({
     data: {
-      type: "CUSTOM_SPELL",
+      type: "CUSTOM_ITEM",
       title,
       slug: slugForHomebrew(title),
-      summary: String(formatted.baseEffect || parsed.data.idea).slice(0, 500),
-      body: { ...formatted, characterId: parsed.data.characterId, baseManaIntent: parsed.data.baseManaIntent },
+      summary: String(formatted.description || parsed.data.idea).slice(0, 500),
+      body: { ...formatted, characterId: parsed.data.characterId },
       rulesResult: rules,
-      discipline: formatted.discipline ? String(formatted.discipline) : undefined,
+      rarity: String(formatted.rarity || rules.rarity),
+      professionRequirements: Array.isArray(formatted.professionRequirements) ? formatted.professionRequirements : [],
+      imagePrompt: formatted.imagePrompt ? String(formatted.imagePrompt) : undefined,
+      imageAltText: formatted.imageAltText ? String(formatted.imageAltText) : undefined,
+      generatedByAi: true,
       status: parsed.data.submitForReview ? "PENDING_DM_REVIEW" : "DRAFT",
       visibility: parsed.data.campaignId ? "CAMPAIGN_ONLY" : "PRIVATE_USER",
       campaignId: parsed.data.campaignId,
-      authorId: userId,
-      generatedByAi: true
+      authorId: userId
     }
   });
 

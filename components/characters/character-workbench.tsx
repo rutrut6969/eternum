@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ResourceBars } from "@/components/resource-bars";
+import { GameplayEditors } from "@/components/characters/gameplay-editors";
 import { calculateMana, calculateStamina, type CastingAbility } from "@/lib/rules/resources";
 
 type CampaignOption = { id: string; name: string; roles: string[] };
@@ -129,45 +130,48 @@ export function CharacterWorkbench({ campaigns, characters }: { campaigns: Campa
         ) : null}
 
         {selected && scores ? (
-          <Card>
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.18em] text-aureate">Character Sheet</p>
-                <h2 className="mt-2 text-3xl font-black text-white">{selected.name}</h2>
-                <p className="mt-1 text-sm text-zinc-300">{[selected.ancestry, selected.className].filter(Boolean).join(" - ") || "Unclassed wanderer"}</p>
-              </div>
-              <Badge tone="gold">Level {selected.level}</Badge>
-            </div>
-            <div className="mt-6">
-              <ResourceBars mana={calculateMana(selected.level, scores, selected.castingAbility ?? "WIS")} stamina={calculateStamina(selected.level, scores)} />
-            </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {[
-                ["Inventory", selected.inventory.length],
-                ["Learned spells", selected.learnedSpells.length],
-                ["Custom spells", selected.customSpells.length],
-                ["Crafted items", selected.craftedItems.length],
-                ["Disciplines", selected.disciplines.length],
-                ["Tamed creatures", selected.tamedCreatures.length],
-                ["Undead servants", selected.undeadServants.length],
-                ["Traits", selected.traits.length],
-                ["Affinities", selected.affinities.length]
-              ].map(([label, count]) => (
-                <div key={label} className="rounded-md border border-white/10 bg-black/25 p-3">
-                  <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">{label}</p>
-                  <p className="mt-1 text-2xl font-bold text-white">{count}</p>
+          <>
+            <Card>
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.18em] text-aureate">Character Sheet</p>
+                  <h2 className="mt-2 text-3xl font-black text-white">{selected.name}</h2>
+                  <p className="mt-1 text-sm text-zinc-300">{[selected.ancestry, selected.className].filter(Boolean).join(" - ") || "Unclassed wanderer"}</p>
                 </div>
-              ))}
-            </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <button className="rounded-md border border-mana/30 px-4 py-3 font-semibold text-mana hover:bg-mana/10" onClick={() => requestBackstoryAnalysis(selected.id)} type="button">
-                Submit backstory analysis
-              </button>
-              <div className="rounded-md border border-white/10 bg-black/25 p-3 text-sm text-zinc-300">
-                Latest approvals: {selected.backstoryAnalyses.length ? selected.backstoryAnalyses.map((item) => item.status).join(", ") : "none"}
+                <Badge tone="gold">Level {selected.level}</Badge>
               </div>
-            </div>
-          </Card>
+              <div className="mt-6">
+                <ResourceBars mana={calculateMana(selected.level, scores, selected.castingAbility ?? "WIS")} stamina={calculateStamina(selected.level, scores)} />
+              </div>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  ["Inventory", selected.inventory.length],
+                  ["Learned spells", selected.learnedSpells.length],
+                  ["Custom spells", selected.customSpells.length],
+                  ["Crafted items", selected.craftedItems.length],
+                  ["Disciplines", selected.disciplines.length],
+                  ["Tamed creatures", selected.tamedCreatures.length],
+                  ["Undead servants", selected.undeadServants.length],
+                  ["Traits", selected.traits.length],
+                  ["Affinities", selected.affinities.length]
+                ].map(([label, count]) => (
+                  <div key={label} className="rounded-md border border-white/10 bg-black/25 p-3">
+                    <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">{label}</p>
+                    <p className="mt-1 text-2xl font-bold text-white">{count}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <button className="rounded-md border border-mana/30 px-4 py-3 font-semibold text-mana hover:bg-mana/10" onClick={() => requestBackstoryAnalysis(selected.id)} type="button">
+                  Submit backstory analysis
+                </button>
+                <div className="rounded-md border border-white/10 bg-black/25 p-3 text-sm text-zinc-300">
+                  Latest approvals: {selected.backstoryAnalyses.length ? selected.backstoryAnalyses.map((item) => item.status).join(", ") : "none"}
+                </div>
+              </div>
+            </Card>
+            <GameplayEditors character={selected} />
+          </>
         ) : (
           <Card>
             <h2 className="text-xl font-bold text-white">No characters yet</h2>

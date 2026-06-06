@@ -246,13 +246,20 @@ model HomebrewContent {
   summary      String?
   body         Json
   rulesResult  Json?
+  rarity       String?
+  discipline   String?
+  professionRequirements Json @default("[]")
+  imageUrl     String?
   imagePrompt  String?
+  imageAltText String?
+  generatedByAi Boolean @default(false)
   status       ApprovalStatus    @default(DRAFT)
   visibility   ContentVisibility @default(PRIVATE_USER)
   campaignId   String?
   authorId     String
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+  publishRequestedAt DateTime?
   publishedAt  DateTime?
 
   campaign  Campaign?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)

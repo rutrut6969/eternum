@@ -1,6 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { BackstoryApprovalPanel } from "@/components/characters/backstory-approval-panel";
 import { CharacterWorkbench } from "@/components/characters/character-workbench";
+import { HomebrewApprovalPanel } from "@/components/homebrew/homebrew-approval-panel";
+import { HomebrewBuilder } from "@/components/homebrew/homebrew-builder";
+import { HomebrewPortfolio } from "@/components/homebrew/homebrew-portfolio";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -24,6 +27,21 @@ export default async function CharactersPage() {
     where: { status: "PENDING_DM_REVIEW", character: { campaignId: { in: dmCampaignIds } } },
     include: { character: { select: { name: true, owner: { select: { name: true, email: true } } } } },
     orderBy: { createdAt: "desc" }
+  });
+  const pendingHomebrew = await prisma.homebrewContent.findMany({
+    where: {
+      status: "PENDING_DM_REVIEW",
+      campaignId: { in: dmCampaignIds }
+    },
+    include: {
+      author: { select: { name: true, username: true, email: true } }
+    },
+    orderBy: { updatedAt: "desc" }
+  });
+  const myHomebrew = await prisma.homebrewContent.findMany({
+    where: { authorId: user.id },
+    orderBy: { updatedAt: "desc" },
+    take: 20
   });
   const campaignOptions = memberships.map((membership) => ({
     id: membership.campaign.id,
@@ -63,6 +81,28 @@ export default async function CharactersPage() {
     suggestion: analysis.suggestion,
     character: analysis.character
   }));
+  const pendingHomebrewSummaries = pendingHomebrew.map((item) => ({
+    id: item.id,
+    type: item.type,
+    title: item.title,
+    summary: item.summary,
+    status: item.status,
+    rarity: item.rarity,
+    discipline: item.discipline,
+    publishRequestedAt: item.publishRequestedAt?.toISOString() ?? null,
+    body: item.body,
+    rulesResult: item.rulesResult,
+    author: item.author
+  }));
+  const myHomebrewSummaries = myHomebrew.map((item) => ({
+    id: item.id,
+    type: item.type,
+    title: item.title,
+    summary: item.summary,
+    status: item.status,
+    visibility: item.visibility,
+    publishRequestedAt: item.publishRequestedAt?.toISOString() ?? null
+  }));
 
   return (
     <main className="mx-auto max-w-7xl px-5 py-12">
@@ -71,8 +111,15 @@ export default async function CharactersPage() {
       <div className="mt-8">
         <CharacterWorkbench campaigns={campaignOptions} characters={characterSummaries} />
       </div>
+      <div className="mt-8 grid gap-5 xl:grid-cols-[1fr_0.75fr]">
+        <HomebrewBuilder campaigns={campaignOptions} characters={characterSummaries.map((character) => ({ id: character.id, name: character.name, campaignId: character.campaignId }))} />
+        <HomebrewPortfolio items={myHomebrewSummaries} />
+      </div>
       <div className="mt-8">
         <BackstoryApprovalPanel analyses={pendingSummaries} />
+      </div>
+      <div className="mt-8">
+        <HomebrewApprovalPanel items={pendingHomebrewSummaries} />
       </div>
     </main>
   );
