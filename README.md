@@ -25,7 +25,12 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Mobile bottom dashboard nav was removed to prevent browser-control overlap and content coverage.
 - Full repository audit pass rechecked app routes, components, core libraries, Prisma schema, README, package scripts, and gameplay tests before continuing integrations.
 - Global mobile/UI hardening now adds document-level horizontal overflow prevention, safe `100dvh` sizing, compact mobile page padding, non-wrapping CTAs, and phone-first headings across public, auth, invite, verify-email, and dashboard pages.
+- Live mobile QA used a Chrome-emulated iPhone 17 viewport (`402 x 874` CSS pixels) to verify public pages, auth forms, mobile drawer, and dashboard routes for overflow and readability.
+- Homepage demo character card now keeps the Level badge, Blacksmithing/Arcane/Mining profession chips, and spell card content inside the iPhone-width viewport.
+- Mobile drawer backdrop now explicitly fills `100dvh`; Chrome live metrics verified the overlay covers the full iPhone viewport behind the drawer.
+- Register username reset control is compact on mobile and sits beside the username field while keeping the longer desktop label.
 - App shell role navigation now derives DM-tool visibility from actual active campaign DM/Assistant DM membership, founder/subscription access, or Founder status instead of relying on stale UI-only role state.
+- Dashboard quick actions and the campaign workspace now hide DM/create-campaign actions for new unverified player accounts while preserving join campaign, character, homebrew, dice, maps, library, and account access.
 - `AGENTS.md` now documents project architecture, development rules, mobile UI rules, authorization rules, testing expectations, and current priorities for future Codex passes.
 - Mobile hamburger drawer now renders as a solid dark fixed panel with blurred backdrop overlay, safe-area padding, scroll lock, high-contrast links, active-route styling, separated DM section, and bottom logout.
 - Public and authenticated routing is server-enforced: logged-in visits to `/`, `/login`, or `/register` redirect to `/dashboard`.
@@ -119,6 +124,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - DM-only mobile drawer links route to the current dashboard/campaign workspaces until dedicated per-tool landing pages exist.
 - `/invite/[token]` and `/verify-email` currently use the neutral root frame while public/auth/dashboard route groups have dedicated shells.
 - Manual visual QA should continue on real devices and browser widths after each UI pass; this pass added CSS/layout safeguards for 390px, 430px, and 768px widths but still relies on build/test validation unless a local browser session is running.
+- The live `https://eternumvtt.com` URL did not respond from this development environment during this pass, so visual QA was performed against localhost with Chrome device emulation.
 
 ## Known Issues
 
@@ -317,6 +323,10 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Logged-in mobile app shell
 - [x] Removed mobile bottom nav overlap
 - [x] Global mobile overflow and safe-area hardening
+- [x] Chrome-emulated iPhone 17 mobile QA
+- [x] Homepage demo character card mobile fix
+- [x] Full-screen mobile drawer backdrop verification
+- [x] Player-safe campaign workspace visibility
 - [x] Full repository audit pass
 - [x] Root AGENTS.md project guidance
 - [x] Server-side redirect from `/`, `/login`, and `/register` for authenticated users

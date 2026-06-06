@@ -4,9 +4,14 @@ import { InviteAcceptForm } from "@/components/campaigns/invite-accept-form";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { subscriptionService } from "@/lib/subscriptions/service";
 
 export default async function CampaignsPage() {
   const user = await requireUser();
+  const account = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { emailVerified: true, isFounder: true }
+  });
   const campaigns = await prisma.campaign.findMany({
     where: { members: { some: { userId: user.id } } },
     include: {
@@ -22,6 +27,12 @@ export default async function CampaignsPage() {
   const archivedCampaigns = campaigns.filter((campaign) => campaign.archivedAt);
   const dmCampaigns = activeCampaigns.filter((campaign) => campaign.members.some((member) => member.userId === user.id && (member.roles.includes("DM") || member.roles.includes("ASSISTANT_DM"))));
   const playerCampaigns = activeCampaigns.filter((campaign) => campaign.members.some((member) => member.userId === user.id && member.roles.includes("PLAYER")));
+  const canUseCampaignCreation = await subscriptionService.canCreateCampaign(user.id);
+  const canCreateCampaign = Boolean(account?.emailVerified && canUseCampaignCreation);
+  const hasDmWorkspace = dmCampaigns.length > 0 || account?.isFounder === true || (await subscriptionService.canAccessDmTools(user.id));
+  const createCampaignMessage = !account?.emailVerified
+    ? "Verify your email before creating campaigns. You can still accept invites, build characters, and browse the public library."
+    : "Your current plan cannot create campaigns yet. You can still accept invites and play in existing campaigns.";
   const summaries = activeCampaigns.map((campaign) => ({
     id: campaign.id,
     name: campaign.name,
@@ -46,16 +57,28 @@ export default async function CampaignsPage() {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-7 sm:px-5 sm:py-10">
-      <Badge tone="gold">DM Tools</Badge>
+      <Badge tone={hasDmWorkspace ? "gold" : "mana"}>{hasDmWorkspace ? "DM Tools" : "Campaigns"}</Badge>
       <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl">Campaign workspace</h1>
-      <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">Create, edit, join, and sort your campaigns by the role you play at each table.</p>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
+        {hasDmWorkspace
+          ? "Create, edit, join, and sort your campaigns by the role you play at each table."
+          : "Join campaigns by invite, open the tables you play in, and keep campaign access separate from character data."}
+      </p>
 
       <section className="mt-8 grid gap-4 md:grid-cols-3">
-        <Card>
-          <h2 className="text-xl font-bold text-white">Campaigns I DM</h2>
-          <p className="mt-3 text-4xl font-black text-aureate">{dmCampaigns.length}</p>
-          <p className="mt-2 text-sm text-zinc-400">Tables where you can manage members, sessions, maps, and approvals.</p>
-        </Card>
+        {hasDmWorkspace ? (
+          <Card>
+            <h2 className="text-xl font-bold text-white">Campaigns I DM</h2>
+            <p className="mt-3 text-4xl font-black text-aureate">{dmCampaigns.length}</p>
+            <p className="mt-2 text-sm text-zinc-400">Tables where you can manage members, sessions, maps, and approvals.</p>
+          </Card>
+        ) : (
+          <Card>
+            <h2 className="text-xl font-bold text-white">Player access</h2>
+            <p className="mt-3 text-4xl font-black text-mana">{activeCampaigns.length}</p>
+            <p className="mt-2 text-sm text-zinc-400">Tables available through accepted invites and memberships.</p>
+          </Card>
+        )}
         <Card>
           <h2 className="text-xl font-bold text-white">Campaigns I play in</h2>
           <p className="mt-3 text-4xl font-black text-mana">{playerCampaigns.length}</p>
@@ -94,7 +117,7 @@ export default async function CampaignsPage() {
       </section>
 
       <div className="mt-8">
-        <CampaignManager campaigns={summaries} />
+        <CampaignManager campaigns={summaries} canCreateCampaign={canCreateCampaign} createCampaignMessage={createCampaignMessage} />
       </div>
 
       {archivedCampaigns.length ? (

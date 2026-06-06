@@ -10,15 +10,14 @@ import { prisma } from "@/lib/prisma";
 import { calculateMana, calculateStamina } from "@/lib/rules/resources";
 import { subscriptionService } from "@/lib/subscriptions/service";
 
-const quickActions = [
-  { href: "/dashboard/campaigns", label: "Create campaign", tone: "gold" },
+const baseQuickActions = [
   { href: "/dashboard", label: "Join campaign", tone: "mana" },
   { href: "/dashboard/characters", label: "Create character", tone: "mana" },
   { href: "/dashboard/homebrew/spells/new", label: "Create homebrew spell", tone: "violet" },
   { href: "/dashboard/homebrew/items/new", label: "Create homebrew item", tone: "violet" },
   { href: "#dice", label: "Open dice roller", tone: "crimson" },
   { href: "/library", label: "Browse public library", tone: "gold" },
-  { href: "/dashboard/maps", label: "Upload/create map", tone: "mana" }
+  { href: "/dashboard/maps", label: "Open maps", tone: "mana" }
 ] as const;
 
 export default async function DashboardPage() {
@@ -60,7 +59,8 @@ export default async function DashboardPage() {
   });
   const dmCampaignIds = activeMemberships.filter((membership) => membership.roles.includes("DM") || membership.roles.includes("ASSISTANT_DM")).map((membership) => membership.campaignId);
   const canAccessDmTools = await subscriptionService.canAccessDmTools(user.id);
-  const showDmTools = canAccessDmTools || dmCampaignIds.length > 0 || account?.globalRoles.includes("DM") === true;
+  const canCreateCampaign = account?.emailVerified && (await subscriptionService.canCreateCampaign(user.id));
+  const showDmTools = canAccessDmTools || dmCampaignIds.length > 0 || account?.isFounder === true;
   const pendingApprovals = await prisma.approvalRequest.count({
     where: { campaignId: { in: dmCampaignIds }, status: "PENDING_DM_REVIEW" }
   });
@@ -80,6 +80,10 @@ export default async function DashboardPage() {
     name: character.name,
     campaignId: character.campaignId
   }));
+  const quickActions = [
+    ...(canCreateCampaign ? [{ href: "/dashboard/campaigns", label: "Create campaign", tone: "gold" } as const] : []),
+    ...baseQuickActions
+  ];
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-7 sm:px-5 sm:py-10">

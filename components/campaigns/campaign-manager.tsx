@@ -18,7 +18,15 @@ type CampaignSummary = {
   counts?: { rolls: number; approvals: number };
 };
 
-export function CampaignManager({ campaigns }: { campaigns: CampaignSummary[] }) {
+export function CampaignManager({
+  campaigns,
+  canCreateCampaign,
+  createCampaignMessage
+}: {
+  campaigns: CampaignSummary[];
+  canCreateCampaign: boolean;
+  createCampaignMessage?: string;
+}) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -95,17 +103,27 @@ export function CampaignManager({ campaigns }: { campaigns: CampaignSummary[] })
 
   return (
     <div className="grid gap-5 xl:grid-cols-[0.45fr_1fr]">
-      <Card>
-        <h2 className="text-2xl font-bold text-white">Create campaign</h2>
-        <form className="mt-5 space-y-4" onSubmit={createCampaign}>
-          <input className="w-full rounded-md border border-white/10 bg-black/30 px-4 py-3 text-base text-white outline-none focus:border-aureate" placeholder="Campaign name" value={name} onChange={(event) => setName(event.target.value)} required />
-          <textarea className="min-h-28 w-full rounded-md border border-white/10 bg-black/30 px-4 py-3 text-base text-white outline-none focus:border-aureate" placeholder="Description" value={description} onChange={(event) => setDescription(event.target.value)} />
-          {message ? <p className="rounded-md border border-mana/25 bg-mana/10 p-3 text-sm text-mana">{message}</p> : null}
-          <button className="w-full rounded-md bg-aureate px-4 py-3 font-semibold text-void disabled:opacity-60" disabled={loading} type="submit">
-            {loading ? "Creating..." : "Create campaign"}
-          </button>
-        </form>
-      </Card>
+      {canCreateCampaign ? (
+        <Card>
+          <h2 className="text-2xl font-bold text-white">Create campaign</h2>
+          <form className="mt-5 space-y-4" onSubmit={createCampaign}>
+            <input className="w-full rounded-md border border-white/10 bg-black/30 px-4 py-3 text-base text-white outline-none focus:border-aureate" placeholder="Campaign name" value={name} onChange={(event) => setName(event.target.value)} required />
+            <textarea className="min-h-28 w-full rounded-md border border-white/10 bg-black/30 px-4 py-3 text-base text-white outline-none focus:border-aureate" placeholder="Description" value={description} onChange={(event) => setDescription(event.target.value)} />
+            {message ? <p className="rounded-md border border-mana/25 bg-mana/10 p-3 text-sm text-mana">{message}</p> : null}
+            <button className="w-full rounded-md bg-aureate px-4 py-3 font-semibold text-void disabled:opacity-60" disabled={loading} type="submit">
+              {loading ? "Creating..." : "Create campaign"}
+            </button>
+          </form>
+        </Card>
+      ) : (
+        <Card>
+          <h2 className="text-2xl font-bold text-white">Join a campaign</h2>
+          <p className="mt-3 text-sm leading-6 text-zinc-300">
+            {createCampaignMessage || "Campaign creation is currently unavailable for this account. You can still join campaigns by invite and manage your characters."}
+          </p>
+          {message ? <p className="mt-4 rounded-md border border-mana/25 bg-mana/10 p-3 text-sm text-mana">{message}</p> : null}
+        </Card>
+      )}
 
       <div className="grid gap-5">
         {campaigns.length === 0 ? (

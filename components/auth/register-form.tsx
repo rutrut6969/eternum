@@ -120,7 +120,7 @@ export function RegisterForm() {
         required
       />
       <div>
-        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
           <input
             className="w-full rounded-md border border-white/10 bg-black/30 px-4 py-3 text-base text-white outline-none focus:border-mana"
             placeholder="Username"
@@ -133,14 +133,15 @@ export function RegisterForm() {
             required
           />
           <button
-            className="rounded-md border border-aureate/40 px-4 py-3 text-sm font-semibold text-aureate transition hover:bg-aureate/10"
+            className="whitespace-nowrap rounded-md border border-aureate/40 px-3 py-3 text-sm font-semibold text-aureate transition hover:bg-aureate/10 sm:px-4"
             type="button"
             onClick={() => {
               setUsername(usernameFromDisplayName(name));
               setUsernameManuallyEdited(false);
             }}
           >
-            Reset from display name
+            <span className="sm:hidden">Reset</span>
+            <span className="hidden sm:inline">Reset from display name</span>
           </button>
         </div>
         {usernameMessage ? (

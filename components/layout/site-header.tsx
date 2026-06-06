@@ -134,7 +134,7 @@ export function SiteHeader({ account, notificationCount, showDmTools, variant }:
       {drawerOpen ? (
         <>
           <button
-            className="fixed inset-0 z-40 bg-black/75 backdrop-blur-sm md:hidden"
+            className="fixed inset-x-0 top-0 z-40 h-[100dvh] w-screen bg-black/75 backdrop-blur-sm md:hidden"
             aria-label="Close navigation menu"
             type="button"
             onClick={() => setDrawerOpen(false)}
