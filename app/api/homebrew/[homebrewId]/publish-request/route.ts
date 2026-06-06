@@ -7,6 +7,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ ho
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { homebrewId } = await params;
 
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerified: true } });
+  if (!user?.emailVerified) return NextResponse.json({ error: "Verify your email before requesting public publishing." }, { status: 403 });
+
   const content = await prisma.homebrewContent.findUnique({ where: { id: homebrewId } });
   if (!content || content.authorId !== userId) return NextResponse.json({ error: "Homebrew not found." }, { status: 404 });
   if (content.status !== "APPROVED_PRIVATE") return NextResponse.json({ error: "Only approved private content can request public publishing." }, { status: 400 });

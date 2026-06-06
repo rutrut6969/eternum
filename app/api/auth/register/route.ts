@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { emailVerificationService } from "@/lib/auth/email-verification-service";
+import { createEmailVerificationToken, sendVerificationEmail } from "@/lib/auth/email-verification";
 import { normalizeUsername, validateEmailFormat, validatePassword, validateUsername } from "@/lib/auth/validation";
 import { prisma } from "@/lib/prisma";
 
@@ -33,11 +33,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
   }
 
-  const emailVerification = await emailVerificationService.verify(email);
-  if (!emailVerification.valid) {
-    return NextResponse.json({ error: emailVerification.message || "Use a valid email address." }, { status: 400 });
-  }
-
   const username = normalizeUsername(parsed.data.username);
   const existingEmail = await prisma.user.findUnique({ where: { email } });
   if (existingEmail) {
@@ -50,16 +45,27 @@ export async function POST(request: Request) {
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const verification = createEmailVerificationToken();
   const user = await prisma.user.create({
     data: {
       name: parsed.data.name,
       username,
       displayUsername: parsed.data.username.trim(),
       email,
+      emailVerificationToken: verification.token,
+      emailVerificationExpires: verification.expires,
       passwordHash,
       globalRoles: ["PLAYER"]
     }
   });
 
-  return NextResponse.json({ id: user.id, email: user.email, username: user.username });
+  const emailResult = await sendVerificationEmail({ email: user.email, name: user.name, token: verification.token });
+
+  return NextResponse.json({
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    verificationEmailSent: emailResult.sent,
+    verificationEmailMessage: emailResult.sent ? undefined : emailResult.message
+  });
 }

@@ -62,6 +62,11 @@ function summaryOf(value: unknown) {
   return String(record.description ?? record.summary ?? record.source ?? record.rarity ?? "");
 }
 
+function imageOf(value: unknown) {
+  const record = toRecord(value);
+  return typeof record.imageUrl === "string" ? record.imageUrl : "";
+}
+
 export function GameplayEditors({ character }: { character: CharacterGameplay }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
@@ -218,6 +223,7 @@ export function GameplayEditors({ character }: { character: CharacterGameplay })
                 <div key={`${field}-${index}`} className="rounded-md border border-white/10 bg-black/25 p-3">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
+                      {imageOf(item) ? <img className="mb-3 aspect-video w-full rounded-md object-cover" src={imageOf(item)} alt={titleOf(item)} /> : null}
                       <p className="font-semibold text-white">{titleOf(item)}</p>
                       {summaryOf(item) ? <p className="mt-1 text-sm text-zinc-400">{summaryOf(item)}</p> : null}
                     </div>

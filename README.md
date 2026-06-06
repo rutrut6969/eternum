@@ -16,12 +16,15 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Account registration API and wired login/register forms with loading states, errors, and redirects.
 - Unique username system with normalized lowercase storage, Prisma uniqueness, live debounced availability checks, and server-side duplicate protection.
 - Registration password rules with live checklist feedback and server-side enforcement.
-- Email validation service abstraction with `none`, ZeroBounce, and Abstract provider options.
-- Email verification prep fields on users for future verification-link workflows.
+- Resend-based email verification links with 24-hour secure tokens, branded email copy, `/verify-email`, and resend support.
+- Email verification feature gates for campaign creation and public homebrew publishing.
+- Account email status UI with a resend verification button.
 - Protected dashboard routes using server-side session checks.
 - Campaign CRUD foundation: authenticated users can create campaigns, campaign creators receive DM and Player roles, DMs can edit name, description, JSON settings, and archive campaigns.
 - Campaign membership role arrays support DM, Player, Assistant DM, Spectator, and mixed-role users.
 - Invite flow foundation: DMs create token invites and authenticated users can accept pending invites.
+- Campaign invite landing page at `/invite/[token]` with campaign preview, DM name, role offer, auth return links, and expired/used/invalid states.
+- DM-only campaign member role editor with multi-role support and final-DM safety protection.
 - Character creation foundation tied to campaigns, with gameplay data fields for inventory, learned spells, custom spells, crafted items, professions, magical disciplines, traits, flaws, affinities, tamed creatures, undead servants, and dice rolls.
 - Mobile-friendly character sheet shell with mana/stamina calculations and gameplay data counters.
 - AI backstory suggestions now persist into `BackstoryAnalysis` as pending DM review.
@@ -34,11 +37,14 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Basic learn/remove spell flows through character-owned learned spell data.
 - Custom spell AI route now persists generated suggestions as draft/pending homebrew with rules-engine mana/tier/concentration/infusion metadata.
 - Homebrew item builder supports manual and AI-assisted item drafts with rarity, stats/body, crafting/profession requirements, attunement, balance notes, image prompt, image alt text, and generated-by-AI metadata.
+- Blob image upload endpoint and mobile upload UI for homebrew images using `BLOB_READ_WRITE_TOKEN`.
 - Image storage foundation is prepared through `imageUrl`, `imagePrompt`, `imageAltText`, `generatedByAi`, and Blob token configuration.
+- Homebrew images render on item/homebrew cards, approval cards, character inventory cards, and public library cards.
 - Homebrew approval queue now supports custom spells, custom items, crafted-item style content, and publish requests with approve private, approve public, reject, request edits, and archive actions.
 - Publish-to-public flow allows authors to request public publication after private approval and lets DMs confirm publication.
 - Public library is database-backed and only shows `APPROVED_PUBLIC` content with `PUBLIC_LIBRARY` visibility.
 - Public library filters include content type, rarity, discipline, profession requirement, creator, campaign source, and name/description search.
+- Validation utilities cover email token generation/expiry, invite token status, member role safety, and Blob upload type/size checks.
 - Eternum rules modules for ability modifiers, mana, stamina, spell tiers, spell infusion, homebrew status, disciplines, necromancy branches, and professions.
 - OpenAI integration helpers and API routes for backstory and custom spell suggestions.
 - Open5e SRD integration helper for public D&D-compatible spell data.
@@ -46,16 +52,16 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 
 ## Partially Implemented
 
-- Campaign CRUD is usable, but per-campaign detail pages, richer settings controls, member role editing, and true hard-delete workflows are still planned.
-- Invite flow uses copyable tokens. Email delivery and invite landing pages are still planned.
+- Campaign CRUD is usable, but per-campaign detail pages, richer settings controls, and true hard-delete workflows are still planned.
+- Invite flow has landing pages and token acceptance, but email delivery for invites is still planned.
 - Character creation stores core identity and gameplay containers, but detailed inventory, spell, crafting, discipline, tamed creature, and undead servant editors are still planned.
 - AI backstory approval applies common JSON fields, but suggestion shape validation and a more guided DM diff/preview UI are still planned.
 - Dice rolls are filtered by campaign visibility, but real-time updates, advanced roll expressions, and per-roll audit views are still planned.
-- Email verification links are prepared at the schema level but not required yet.
+- Email verification is required for campaign creation and public publishing, but not yet required for every account action.
 - Gameplay editors are functional JSON-backed editors; richer dedicated item/spell/taming/undead forms and validation are still planned.
 - Spellbook SRD import depends on Open5e availability at runtime.
 - Homebrew item power validation is basic rarity heuristic validation, not a full balance simulator yet.
-- Blob/image upload is not implemented yet; the schema and env setup are ready for storing Blob URLs.
+- Blob upload supports direct user-uploaded images, but AI image generation is still planned.
 
 ## Known Issues
 
@@ -64,18 +70,20 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Auth currently uses credentials only. OAuth providers can be added later if desired.
 - AI backstory analysis requires `OPENAI_API_KEY`; the rest of the dashboard still works without it.
 - Campaign archive is a soft delete via `archivedAt`.
-- Role editing UI is not yet exposed even though the schema supports multiple campaign roles.
 - Existing development databases with users may need a migration/backfill strategy before making `username` required in production.
 - Existing development databases need `npm run db:push` after this pass to add homebrew metadata columns.
 - Public library profession filtering currently filters JSON requirements in application code after fetching approved public records.
+- Resend requires a verified sending domain for production email delivery.
+- If `RESEND_API_KEY` is missing, registration still creates the account but verification email sending reports the configuration issue.
+- Blob image upload requires `BLOB_READ_WRITE_TOKEN`; otherwise upload requests return a configuration error.
 
 ## Next Recommended Steps
 
 1. Run `npm run db:push` against the development database to apply the expanded schema.
-2. Add Blob upload endpoints/UI for item images using `BLOB_READ_WRITE_TOKEN`.
-3. Add email verification link issuance and require verified email before subscriptions or public launch.
-4. Add member role editing and campaign invite landing pages.
-5. Upgrade gameplay editors with richer domain-specific validation and edit-in-place flows.
+2. Add invite email delivery through Resend.
+3. Add verified-email gates for future Discord and subscription features when those integrations exist.
+4. Upgrade gameplay editors with richer domain-specific validation and edit-in-place flows.
+5. Add route-level tests for Resend error handling, invite acceptance, role editing, and Blob uploads.
 6. Add tests for auth validation, rules engine, approval flows, homebrew publishing, invite flow, and dice visibility filtering.
 7. Add realtime roll updates and richer campaign activity logs.
 
@@ -99,11 +107,11 @@ Open [http://localhost:3000](http://localhost:3000).
 - `OPENAI_API_KEY`: Enables AI-assisted backstory, spell, and item workflows.
 - `OPENAI_MODEL`: Defaults to `gpt-4o-mini`.
 - `OPEN5E_BASE_URL`: Defaults to `https://api.open5e.com/v1`.
-- `EMAIL_VERIFICATION_PROVIDER`: `none`, `zerobounce`, or `abstract`. Defaults to `none`.
-- `EMAIL_VERIFICATION_API_KEY`: API key for ZeroBounce or Abstract when enabled.
-- `BLOB_READ_WRITE_TOKEN`: Future Vercel Blob token for item image uploads. Image URL fields work without upload support.
+- `RESEND_API_KEY`: Required to send verification emails.
+- `EMAIL_FROM`: Sender address for Resend, for example `noreply@eternumtabletop.com`.
+- `BLOB_READ_WRITE_TOKEN`: Vercel Blob token for homebrew image uploads. Image URL fields work without upload support.
 
-With `EMAIL_VERIFICATION_PROVIDER=none`, registration only performs normal email format validation. With ZeroBounce or Abstract enabled, registration rejects invalid, disposable, or risky emails before account creation.
+`EMAIL_VERIFICATION_PROVIDER` and `EMAIL_VERIFICATION_API_KEY` have been deprecated in favor of Resend verification links.
 
 ## Account Rules
 
@@ -125,9 +133,31 @@ Passwords:
 Email:
 
 - Format is validated client-side and server-side.
-- Optional provider verification can be enabled with `EMAIL_VERIFICATION_PROVIDER`.
-- Email verification tokens and expiry fields are present, but verification links are not required yet.
-- Verification links should be required before subscriptions, paid features, public publishing, or public launch.
+- Registration generates a 24-hour verification token.
+- Resend sends a branded link to `${NEXTAUTH_URL}/verify-email?token=TOKEN`.
+- Verified email is required before campaign creation and public homebrew publishing.
+- Verification should also gate subscriptions, paid features, Discord integration, and other public launch surfaces.
+
+## Resend Setup
+
+1. Create a Resend account.
+2. Verify the sending domain for `EMAIL_FROM`, such as `eternumtabletop.com`.
+3. Set `RESEND_API_KEY`, `EMAIL_FROM`, and `NEXTAUTH_URL` in local and production environments.
+4. Register a test account and use the dashboard resend button if the first email fails.
+
+## Blob Image Upload Setup
+
+1. Create or connect a Vercel Blob store.
+2. Set `BLOB_READ_WRITE_TOKEN`.
+3. Use homebrew portfolio or approval cards to upload JPG, PNG, WebP, or GIF images up to 5MB.
+4. Uploaded URLs are stored on homebrew records and displayed in approvals, inventory-style cards, and the public library.
+
+## Invite Links
+
+- DMs can create invite tokens from campaign management.
+- Share `/invite/TOKEN` with players.
+- The invite page previews campaign name, DM, offered roles, and expiration.
+- Logged-out users can sign in or register and return to the invite page.
 
 ## Database
 
@@ -178,12 +208,17 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Live debounced username availability checks
 - [x] Server-side username, email, and password validation
 - [x] Password requirements checklist
-- [x] Optional email verification provider abstraction
 - [x] Email verification schema prep
+- [x] Resend email verification links
+- [x] Account email status and resend UI
+- [x] Verification gates for campaign creation and public publishing
 - [x] Dashboard route protection
 - [x] Campaign CRUD foundation
 - [x] Multi-role campaign membership schema
 - [x] Invite token creation and acceptance foundation
+- [x] Invite landing page
+- [x] Campaign member role editing
+- [x] Final DM role safety protection
 - [x] Character creation foundation
 - [x] Character gameplay data containers
 - [x] Character gameplay editors
@@ -199,6 +234,9 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Publish-to-public request and DM confirmation flow
 - [x] Public library database search and filters
 - [x] Image storage metadata foundation
+- [x] Blob image upload endpoint and UI
+- [x] Uploaded image rendering on homebrew, approval, inventory, and library cards
+- [x] Validation utilities for email tokens, invites, role safety, and Blob uploads
 - [x] Server-side dice roll foundation
 - [x] Dice roll UI and visibility filtering foundation
 - [x] DM reveal foundation for hidden rolls
@@ -211,16 +249,14 @@ Do not run deployment watch commands until the Vercel project is linked.
 
 ### In Progress
 
-- [ ] Campaign member role editing
-- [ ] Email verification link issuance and required verification gate
-- [ ] Campaign invite landing page and email delivery
-- [ ] Blob image upload endpoint/UI
+- [ ] Campaign invite email delivery
 - [ ] Rich spellbook and item detail editors
 - [ ] Advanced homebrew balance validation
 
 ### Planned
 
 - [ ] Session notes editor
+- [ ] Discord integration
 - [ ] Realtime dice/activity updates
 - [ ] Auth validation test suite
 - [ ] Homebrew workflow test suite

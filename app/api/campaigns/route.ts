@@ -35,6 +35,8 @@ export async function GET() {
 export async function POST(request: Request) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerified: true } });
+  if (!user?.emailVerified) return NextResponse.json({ error: "Verify your email before creating campaigns." }, { status: 403 });
 
   const parsed = createSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid campaign details." }, { status: 400 });

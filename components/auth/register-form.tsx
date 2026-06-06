@@ -1,12 +1,13 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getPasswordRules, validateEmailFormat, validateUsername } from "@/lib/auth/validation";
 
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
@@ -98,7 +99,7 @@ export function RegisterForm() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(searchParams.get("callbackUrl") || "/dashboard");
     router.refresh();
   }
 

@@ -4,13 +4,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { MemberRoleEditor } from "@/components/campaigns/member-role-editor";
 
 type CampaignSummary = {
   id: string;
   name: string;
   description: string | null;
   settings: unknown;
-  members: Array<{ id: string; roles: string[]; user: { name: string | null; email: string } }>;
+  members: Array<{ id: string; userId: string; roles: string[]; user: { name: string | null; email: string; username?: string } }>;
   invites: Array<{ id: string; email: string; token: string; roles: string[]; status: string }>;
   characters: Array<{ id: string; name: string }>;
   counts?: { rolls: number; approvals: number };
@@ -169,6 +170,10 @@ export function CampaignManager({ campaigns }: { campaigns: CampaignSummary[] })
                   Save settings
                 </button>
               </div>
+            </div>
+
+            <div className="mt-5">
+              <MemberRoleEditor campaignId={campaign.id} members={campaign.members} />
             </div>
           </Card>
         ))}

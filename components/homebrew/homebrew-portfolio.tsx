@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { HomebrewImageUploader } from "@/components/homebrew/homebrew-image-uploader";
 
 type HomebrewItem = {
   id: string;
@@ -13,6 +14,8 @@ type HomebrewItem = {
   status: string;
   visibility: string;
   publishRequestedAt: string | null;
+  imageUrl: string | null;
+  imageAltText: string | null;
 };
 
 export function HomebrewPortfolio({ items }: { items: HomebrewItem[] }) {
@@ -45,6 +48,7 @@ export function HomebrewPortfolio({ items }: { items: HomebrewItem[] }) {
                   <Badge tone={item.status === "APPROVED_PUBLIC" ? "gold" : "mana"}>{item.status}</Badge>
                 </div>
                 <h3 className="mt-3 text-lg font-bold text-white">{item.title}</h3>
+                {item.imageUrl ? <img className="mt-3 aspect-video w-full rounded-md object-cover" src={item.imageUrl} alt={item.imageAltText || item.title} /> : null}
                 {item.summary ? <p className="mt-2 text-sm text-zinc-300">{item.summary}</p> : null}
               </div>
               {item.status === "APPROVED_PRIVATE" && !item.publishRequestedAt ? (
@@ -53,6 +57,7 @@ export function HomebrewPortfolio({ items }: { items: HomebrewItem[] }) {
                 </button>
               ) : null}
             </div>
+            {item.status !== "APPROVED_PUBLIC" && item.status !== "ARCHIVED" ? <HomebrewImageUploader homebrewId={item.id} /> : null}
           </div>
         ))}
       </div>

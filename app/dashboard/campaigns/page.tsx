@@ -8,7 +8,7 @@ export default async function CampaignsPage() {
   const campaigns = await prisma.campaign.findMany({
     where: { members: { some: { userId: user.id } }, archivedAt: null },
     include: {
-      members: { include: { user: { select: { id: true, name: true, email: true } } } },
+      members: { include: { user: { select: { id: true, name: true, email: true, username: true } } } },
       invites: { where: { status: "PENDING" }, orderBy: { createdAt: "desc" } },
       characters: { where: { ownerId: user.id }, select: { id: true, name: true } },
       _count: { select: { diceRolls: true, approvals: true } }
@@ -22,8 +22,9 @@ export default async function CampaignsPage() {
     settings: campaign.settings,
     members: campaign.members.map((member) => ({
       id: member.id,
+      userId: member.userId,
       roles: member.roles,
-      user: { name: member.user.name, email: member.user.email }
+      user: { name: member.user.name, email: member.user.email, username: member.user.username }
     })),
     invites: campaign.invites.map((invite) => ({
       id: invite.id,

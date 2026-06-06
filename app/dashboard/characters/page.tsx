@@ -90,6 +90,8 @@ export default async function CharactersPage() {
     rarity: item.rarity,
     discipline: item.discipline,
     publishRequestedAt: item.publishRequestedAt?.toISOString() ?? null,
+    imageUrl: item.imageUrl,
+    imageAltText: item.imageAltText,
     body: item.body,
     rulesResult: item.rulesResult,
     author: item.author
@@ -101,7 +103,9 @@ export default async function CharactersPage() {
     summary: item.summary,
     status: item.status,
     visibility: item.visibility,
-    publishRequestedAt: item.publishRequestedAt?.toISOString() ?? null
+    publishRequestedAt: item.publishRequestedAt?.toISOString() ?? null,
+    imageUrl: item.imageUrl,
+    imageAltText: item.imageAltText
   }));
 
   return (

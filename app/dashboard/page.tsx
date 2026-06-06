@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DiceRoller } from "@/components/dice/dice-roller";
+import { EmailStatusCard } from "@/components/account/email-status-card";
 import { InviteAcceptForm } from "@/components/campaigns/invite-accept-form";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -14,6 +15,10 @@ const queues = [
 
 export default async function DashboardPage() {
   const user = await requireUser();
+  const account = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { email: true, emailVerified: true }
+  });
   const memberships = await prisma.campaignMember.findMany({
     where: { userId: user.id, campaign: { archivedAt: null } },
     include: {
@@ -65,6 +70,11 @@ export default async function DashboardPage() {
           ))}
         </div>
       </div>
+      {account ? (
+        <section className="mt-8">
+          <EmailStatusCard email={account.email} verified={Boolean(account.emailVerified)} />
+        </section>
+      ) : null}
       <section className="mt-8">
         <h2 className="text-2xl font-bold text-white">My Campaigns</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">

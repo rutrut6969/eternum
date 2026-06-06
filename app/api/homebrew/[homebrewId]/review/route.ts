@@ -21,6 +21,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ho
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid review action." }, { status: 400 });
 
+  if (parsed.data.action === "approve_public") {
+    const reviewer = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerified: true } });
+    if (!reviewer?.emailVerified) return NextResponse.json({ error: "Verify your email before publishing public homebrew." }, { status: 403 });
+  }
+
   const content = await prisma.homebrewContent.findUnique({ where: { id: homebrewId } });
   if (!content?.campaignId) return NextResponse.json({ error: "Homebrew not found." }, { status: 404 });
 
