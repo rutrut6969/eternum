@@ -14,6 +14,10 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Prisma/PostgreSQL schema for users, auth sessions, campaigns, multi-role campaign members, invites, characters, character gameplay JSON, professions, backstory analysis, homebrew content, approvals, session notes, and dice rolls.
 - NextAuth credentials configuration with Prisma adapter and password hashing.
 - Account registration API and wired login/register forms with loading states, errors, and redirects.
+- Unique username system with normalized lowercase storage, Prisma uniqueness, live debounced availability checks, and server-side duplicate protection.
+- Registration password rules with live checklist feedback and server-side enforcement.
+- Email validation service abstraction with `none`, ZeroBounce, and Abstract provider options.
+- Email verification prep fields on users for future verification-link workflows.
 - Protected dashboard routes using server-side session checks.
 - Campaign CRUD foundation: authenticated users can create campaigns, campaign creators receive DM and Player roles, DMs can edit name, description, JSON settings, and archive campaigns.
 - Campaign membership role arrays support DM, Player, Assistant DM, Spectator, and mixed-role users.
@@ -36,6 +40,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Character creation stores core identity and gameplay containers, but detailed inventory, spell, crafting, discipline, tamed creature, and undead servant editors are still planned.
 - AI backstory approval applies common JSON fields, but suggestion shape validation and a more guided DM diff/preview UI are still planned.
 - Dice rolls are filtered by campaign visibility, but real-time updates, advanced roll expressions, and per-roll audit views are still planned.
+- Email verification links are prepared at the schema level but not required yet.
 - Public library page is currently seeded with static examples while the public homebrew query UI is built.
 
 ## Known Issues
@@ -46,16 +51,17 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - AI backstory analysis requires `OPENAI_API_KEY`; the rest of the dashboard still works without it.
 - Campaign archive is a soft delete via `archivedAt`.
 - Role editing UI is not yet exposed even though the schema supports multiple campaign roles.
+- Existing development databases with users may need a migration/backfill strategy before making `username` required in production.
 
 ## Next Recommended Steps
 
 1. Run `npm run db:push` against the development database to apply the expanded schema.
-2. Add member role editing and campaign invite landing pages.
-3. Build detailed inventory, spellbook, crafting, discipline, tamed creature, and undead servant editors.
-4. Add custom spell and item builders with rules-engine validation and approval persistence.
-5. Build public library filtering/search over approved public homebrew.
-6. Add tests for the rules engine, approval flows, invite flow, and dice visibility filtering.
-7. Add realtime roll updates and richer campaign activity logs.
+2. Add email verification link issuance and require verified email before subscriptions or public launch.
+3. Add member role editing and campaign invite landing pages.
+4. Build detailed inventory, spellbook, crafting, discipline, tamed creature, and undead servant editors.
+5. Add custom spell and item builders with rules-engine validation and approval persistence.
+6. Build public library filtering/search over approved public homebrew.
+7. Add tests for auth validation, rules engine, approval flows, invite flow, and dice visibility filtering.
 
 ## Setup
 
@@ -77,8 +83,34 @@ Open [http://localhost:3000](http://localhost:3000).
 - `OPENAI_API_KEY`: Enables AI-assisted backstory, spell, and item workflows.
 - `OPENAI_MODEL`: Defaults to `gpt-4o-mini`.
 - `OPEN5E_BASE_URL`: Defaults to `https://api.open5e.com/v1`.
+- `EMAIL_VERIFICATION_PROVIDER`: `none`, `zerobounce`, or `abstract`. Defaults to `none`.
+- `EMAIL_VERIFICATION_API_KEY`: API key for ZeroBounce or Abstract when enabled.
 
-No new environment variables were added in this pass.
+With `EMAIL_VERIFICATION_PROVIDER=none`, registration only performs normal email format validation. With ZeroBounce or Abstract enabled, registration rejects invalid, disposable, or risky emails before account creation.
+
+## Account Rules
+
+Usernames:
+
+- 3-24 characters.
+- Letters, numbers, and underscores only.
+- No spaces.
+- Stored as normalized lowercase `username` for uniqueness.
+- Optional `displayUsername` preserves chosen casing for future UI use.
+
+Passwords:
+
+- Minimum 8 characters.
+- At least 1 uppercase letter.
+- At least 1 number.
+- At least 1 symbol.
+
+Email:
+
+- Format is validated client-side and server-side.
+- Optional provider verification can be enabled with `EMAIL_VERIFICATION_PROVIDER`.
+- Email verification tokens and expiry fields are present, but verification links are not required yet.
+- Verification links should be required before subscriptions, paid features, public publishing, or public launch.
 
 ## Database
 
@@ -125,6 +157,12 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Prisma schema foundation
 - [x] Authentication setup foundation
 - [x] Login/register form wiring
+- [x] Unique username schema and availability API
+- [x] Live debounced username availability checks
+- [x] Server-side username, email, and password validation
+- [x] Password requirements checklist
+- [x] Optional email verification provider abstraction
+- [x] Email verification schema prep
 - [x] Dashboard route protection
 - [x] Campaign CRUD foundation
 - [x] Multi-role campaign membership schema
@@ -145,6 +183,7 @@ Do not run deployment watch commands until the Vercel project is linked.
 ### In Progress
 
 - [ ] Campaign member role editing
+- [ ] Email verification link issuance and required verification gate
 - [ ] Campaign invite landing page and email delivery
 - [ ] Character inventory/spell/crafting editors
 - [ ] AI spell builder persistence
@@ -157,5 +196,6 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Public library database search
 - [ ] Session notes editor
 - [ ] Realtime dice/activity updates
+- [ ] Auth validation test suite
 - [ ] Rules engine test suite
 - [ ] Vercel deployment verification

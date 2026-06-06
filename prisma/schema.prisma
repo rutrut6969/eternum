@@ -68,8 +68,12 @@ enum CastingAbility {
 model User {
   id            String    @id @default(cuid())
   name          String?
+  username      String    @unique
+  displayUsername String?
   email         String    @unique
   emailVerified DateTime?
+  emailVerificationToken String? @unique
+  emailVerificationExpires DateTime?
   image         String?
   passwordHash  String?
   globalRoles   GlobalRole[] @default([PLAYER])
