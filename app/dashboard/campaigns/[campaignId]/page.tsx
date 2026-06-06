@@ -44,7 +44,7 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
       },
       activityLogs: { include: { actor: { select: { name: true, username: true } } }, orderBy: { createdAt: "desc" }, take: 40 },
       homebrew: { where: { status: "PENDING_DM_REVIEW" }, orderBy: { updatedAt: "desc" }, take: 10 },
-      maps: { include: { layers: true, tokens: true, encounters: true }, orderBy: { updatedAt: "desc" } }
+      maps: { include: { images: true, tags: true, layers: true, tokens: true, encounters: true }, orderBy: { updatedAt: "desc" } }
     }
   });
   if (!campaign) notFound();
@@ -87,6 +87,9 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
     name: map.name,
     width: map.width,
     height: map.height,
+    gridType: map.gridType,
+    images: map.images,
+    tags: map.tags,
     layers: map.layers,
     tokens: map.tokens,
     encounters: map.encounters

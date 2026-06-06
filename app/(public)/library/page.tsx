@@ -4,61 +4,71 @@ import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+type PublicLibraryItem = Prisma.HomebrewContentGetPayload<{
+  include: {
+    author: { select: { name: true; username: true } };
+    campaign: { select: { name: true } };
+  };
+}>;
 
 function valueOf(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function clean(value: string | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function textIncludes(value: string | null | undefined, query: string | undefined) {
+  if (!query) return true;
+  return (value ?? "").toLowerCase().includes(query.toLowerCase());
+}
+
 export default async function LibraryPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
-  const query = valueOf(params.q) ?? "";
-  const type = valueOf(params.type);
-  const rarity = valueOf(params.rarity);
-  const discipline = valueOf(params.discipline);
-  const profession = valueOf(params.profession);
-  const creator = valueOf(params.creator);
-  const campaign = valueOf(params.campaign);
+  const query = clean(valueOf(params.q));
+  const type = clean(valueOf(params.type));
+  const rarity = clean(valueOf(params.rarity));
+  const discipline = clean(valueOf(params.discipline));
+  const profession = clean(valueOf(params.profession));
+  const creator = clean(valueOf(params.creator));
+  const campaign = clean(valueOf(params.campaign));
+  const contentTypes = Object.values(ContentType);
+  const safeType = type && contentTypes.includes(type as ContentType) ? (type as ContentType) : undefined;
 
   const where: Prisma.HomebrewContentWhereInput = {
     status: "APPROVED_PUBLIC",
     visibility: "PUBLIC_LIBRARY",
-    ...(type ? { type: type as ContentType } : {}),
-    ...(rarity ? { rarity: { contains: rarity, mode: "insensitive" } } : {}),
-    ...(discipline ? { discipline: { contains: discipline, mode: "insensitive" } } : {}),
-    ...(query
-      ? {
-          OR: [
-            { title: { contains: query, mode: "insensitive" } },
-            { summary: { contains: query, mode: "insensitive" } }
-          ]
-        }
-      : {}),
-    ...(creator
-      ? {
-          author: {
-            OR: [
-              { username: { contains: creator.toLowerCase(), mode: "insensitive" } },
-              { name: { contains: creator, mode: "insensitive" } }
-            ]
-          }
-        }
-      : {}),
-    ...(campaign ? { campaign: { name: { contains: campaign, mode: "insensitive" } } } : {})
+    ...(safeType ? { type: safeType } : {}),
+    ...(rarity ? { rarity } : {}),
+    ...(discipline ? { discipline } : {})
   };
 
-  const items = await prisma.homebrewContent.findMany({
-    where,
-    include: {
-      author: { select: { name: true, username: true } },
-      campaign: { select: { name: true } }
-    },
-    orderBy: { publishedAt: "desc" },
-    take: 60
-  });
+  let items: PublicLibraryItem[] = [];
+  let libraryError: string | null = null;
 
-  const filtered = profession
-    ? items.filter((item) => JSON.stringify(item.professionRequirements).toLowerCase().includes(profession.toLowerCase()))
-    : items;
+  try {
+    items = await prisma.homebrewContent.findMany({
+      where,
+      include: {
+        author: { select: { name: true, username: true } },
+        campaign: { select: { name: true } }
+      },
+      orderBy: { publishedAt: "desc" },
+      take: 100
+    });
+  } catch (error) {
+    console.error("Public library query failed", error);
+    libraryError = "The public library could not be loaded right now. Please try again after the database is synced.";
+  }
+
+  const filtered = items
+    .filter((item) => !query || textIncludes(item.title, query) || textIncludes(item.summary, query))
+    .filter((item) => !profession || JSON.stringify(item.professionRequirements ?? []).toLowerCase().includes(profession.toLowerCase()))
+    .filter((item) => !creator || textIncludes(item.author.username, creator) || textIncludes(item.author.name, creator))
+    .filter((item) => !campaign || textIncludes(item.campaign?.name, campaign))
+    .slice(0, 60);
 
   return (
     <main className="mx-auto max-w-7xl px-5 py-12">
@@ -69,8 +79,8 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
       </p>
 
       <form className="mt-8 grid gap-3 rounded-lg border border-white/10 bg-charcoal/70 p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <input className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="q" defaultValue={query} placeholder="Name or description" />
-        <select className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="type" defaultValue={type ?? ""}>
+        <input className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="q" defaultValue={query ?? ""} placeholder="Name or description" />
+        <select className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="type" defaultValue={safeType ?? ""}>
           <option value="">All types</option>
           <option value="CUSTOM_SPELL">Spells</option>
           <option value="CUSTOM_ITEM">Items</option>
@@ -87,8 +97,17 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
         <button className="rounded-md bg-aureate px-4 py-3 font-semibold text-void" type="submit">Search</button>
       </form>
 
+      {libraryError ? (
+        <div className="mt-8">
+          <Card>
+            <h2 className="text-xl font-bold text-white">Library temporarily unavailable</h2>
+            <p className="mt-3 text-sm leading-6 text-zinc-300">{libraryError}</p>
+          </Card>
+        </div>
+      ) : null}
+
       <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {filtered.length === 0 ? (
+        {!libraryError && filtered.length === 0 ? (
           <Card>
             <h2 className="text-xl font-bold text-white">No public homebrew found</h2>
             <p className="mt-3 text-sm text-zinc-300">Approved public content will appear here after DM publication.</p>

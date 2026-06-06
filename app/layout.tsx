@@ -11,6 +11,7 @@ const nav = [
   { href: "/", label: "Eternum" },
   { href: "/rules", label: "Rules" },
   { href: "/library", label: "Library" },
+  { href: "/maps", label: "Maps" },
   { href: "/about", label: "Vision" },
   { href: "/dashboard", label: "Dashboard" }
 ];

@@ -3,13 +3,14 @@
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { getPasswordRules, validateEmailFormat, validateUsername } from "@/lib/auth/validation";
+import { getPasswordRules, usernameFromDisplayName, validateEmailFormat, validateUsername } from "@/lib/auth/validation";
 
 export function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
+  const [usernameManuallyEdited, setUsernameManuallyEdited] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [usernameMessage, setUsernameMessage] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -20,6 +21,11 @@ export function RegisterForm() {
   const passwordValid = passwordRules.every((rule) => rule.valid);
   const emailValid = email.length === 0 || validateEmailFormat(email);
   const localUsernameValidation = username ? validateUsername(username) : { valid: false, message: "" };
+
+  useEffect(() => {
+    if (usernameManuallyEdited) return;
+    setUsername(usernameFromDisplayName(name));
+  }, [name, usernameManuallyEdited]);
 
   useEffect(() => {
     if (!username) {
@@ -114,14 +120,29 @@ export function RegisterForm() {
         required
       />
       <div>
-        <input
-          className="w-full rounded-md border border-white/10 bg-black/30 px-4 py-3 text-base text-white outline-none focus:border-mana"
-          placeholder="Username"
-          autoComplete="username"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          required
-        />
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <input
+            className="w-full rounded-md border border-white/10 bg-black/30 px-4 py-3 text-base text-white outline-none focus:border-mana"
+            placeholder="Username"
+            autoComplete="username"
+            value={username}
+            onChange={(event) => {
+              setUsernameManuallyEdited(true);
+              setUsername(event.target.value);
+            }}
+            required
+          />
+          <button
+            className="rounded-md border border-aureate/40 px-4 py-3 text-sm font-semibold text-aureate transition hover:bg-aureate/10"
+            type="button"
+            onClick={() => {
+              setUsername(usernameFromDisplayName(name));
+              setUsernameManuallyEdited(false);
+            }}
+          >
+            Reset from display name
+          </button>
+        </div>
         {usernameMessage ? (
           <p
             className={[

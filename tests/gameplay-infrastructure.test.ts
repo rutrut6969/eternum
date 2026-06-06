@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createEmailVerificationToken, isVerificationTokenExpired } from "@/lib/auth/email-verification";
+import { usernameFromDisplayName, validateUsername } from "@/lib/auth/validation";
 import { getInviteStatus } from "@/lib/invites";
+import { buildTopDownBattleMapPrompt } from "@/lib/maps/prompt-templates";
 import { wouldRemoveFinalDm } from "@/lib/member-roles";
 import { milestoneForGameplayChange, professionMilestone } from "@/lib/milestones";
 import { transitionSessionStatus } from "@/lib/sessions";
@@ -75,5 +77,28 @@ describe("email verification tokens", () => {
     expect(verification.token).toHaveLength(64);
     expect(isVerificationTokenExpired(new Date(Date.now() - 1))).toBe(true);
     expect(isVerificationTokenExpired(verification.expires)).toBe(false);
+  });
+});
+
+describe("username creation", () => {
+  it("generates normalized usernames from display names", () => {
+    expect(usernameFromDisplayName("Isaac Rutledge")).toBe("isaac_rutledge");
+    expect(usernameFromDisplayName("  Arcane  Knight!!!  ")).toBe("arcane_knight");
+    expect(usernameFromDisplayName("This Name Is Way Too Long For A Username")).toHaveLength(24);
+  });
+
+  it("keeps server-side username validation strict", () => {
+    expect(validateUsername("valid_name_123").valid).toBe(true);
+    expect(validateUsername("bad name").valid).toBe(false);
+  });
+});
+
+describe("AI map prompt templates", () => {
+  it("enforces top-down VTT battle map constraints", () => {
+    const prompt = buildTopDownBattleMapPrompt({ prompt: "ruined chapel in a cursed forest", gridType: "square", width: 30, height: 30 });
+
+    expect(prompt).toContain("top-down");
+    expect(prompt).toContain("Do not include text labels");
+    expect(prompt).toContain("grid-friendly");
   });
 });

@@ -34,32 +34,47 @@ export async function POST(request: Request) {
   }
 
   const username = normalizeUsername(parsed.data.username);
-  const existingEmail = await prisma.user.findUnique({ where: { email } });
-  if (existingEmail) {
-    return NextResponse.json({ error: "An account already exists for this email." }, { status: 409 });
-  }
+  let user;
+  let emailResult: { sent: boolean; message?: string } = { sent: false, message: "Verification email was not attempted." };
 
-  const existingUsername = await prisma.user.findUnique({ where: { username } });
-  if (existingUsername) {
-    return NextResponse.json({ error: "Username is already taken." }, { status: 409 });
-  }
-
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-  const verification = createEmailVerificationToken();
-  const user = await prisma.user.create({
-    data: {
-      name: parsed.data.name,
-      username,
-      displayUsername: parsed.data.username.trim(),
-      email,
-      emailVerificationToken: verification.token,
-      emailVerificationExpires: verification.expires,
-      passwordHash,
-      globalRoles: ["PLAYER"]
+  try {
+    const existingEmail = await prisma.user.findUnique({ where: { email } });
+    if (existingEmail) {
+      return NextResponse.json({ error: "An account already exists for this email." }, { status: 409 });
     }
-  });
 
-  const emailResult = await sendVerificationEmail({ email: user.email, name: user.name, token: verification.token });
+    const existingUsername = await prisma.user.findUnique({ where: { username } });
+    if (existingUsername) {
+      return NextResponse.json({ error: "Username is already taken." }, { status: 409 });
+    }
+
+    const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+    const verification = createEmailVerificationToken();
+    user = await prisma.user.create({
+      data: {
+        name: parsed.data.name.trim(),
+        username,
+        displayUsername: parsed.data.username.trim(),
+        email,
+        emailVerificationToken: verification.token,
+        emailVerificationExpires: verification.expires,
+        passwordHash,
+        globalRoles: ["PLAYER"]
+      }
+    });
+
+    emailResult = await sendVerificationEmail({ email: user.email, name: user.name, token: verification.token });
+  } catch (error) {
+    console.error("Registration failed", error);
+    return NextResponse.json(
+      { error: "Registration is temporarily unavailable. Please try again after database setup is complete." },
+      { status: 500 }
+    );
+  }
+
+  if (!user) {
+    return NextResponse.json({ error: "Could not create that account." }, { status: 500 });
+  }
 
   return NextResponse.json({
     id: user.id,

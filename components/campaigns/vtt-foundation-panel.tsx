@@ -5,7 +5,18 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
-type MapSummary = { id: string; name: string; width: number; height: number; layers: unknown[]; tokens: unknown[]; encounters: unknown[] };
+type MapSummary = {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  gridType?: string;
+  images?: unknown[];
+  tags?: { label: string }[];
+  layers: unknown[];
+  tokens: unknown[];
+  encounters: unknown[];
+};
 
 export function VttFoundationPanel({ campaignId, maps, canManage }: { campaignId: string; maps: MapSummary[]; canManage: boolean }) {
   const router = useRouter();
@@ -41,7 +52,8 @@ export function VttFoundationPanel({ campaignId, maps, canManage }: { campaignId
         {maps.map((map) => (
           <div key={map.id} className="rounded-md border border-white/10 bg-black/25 p-3">
             <h3 className="font-bold text-white">{map.name}</h3>
-            <p className="mt-1 text-sm text-zinc-400">{map.width} x {map.height} grid - {map.layers.length} layers - {map.tokens.length} tokens - {map.encounters.length} encounters</p>
+            <p className="mt-1 text-sm text-zinc-400">{map.width} x {map.height} {map.gridType?.toLowerCase() ?? "square"} grid - {map.layers.length} layers - {map.tokens.length} tokens - {map.encounters.length} encounters - {map.images?.length ?? 0} images</p>
+            {map.tags?.length ? <p className="mt-2 text-xs text-zinc-500">{map.tags.map((tag) => tag.label).join(" / ")}</p> : null}
           </div>
         ))}
       </div>

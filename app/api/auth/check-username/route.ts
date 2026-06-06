@@ -11,7 +11,16 @@ export async function GET(request: Request) {
   }
 
   const normalizedUsername = normalizeUsername(username);
-  const existing = await prisma.user.findUnique({ where: { username: normalizedUsername } });
+  let existing;
+  try {
+    existing = await prisma.user.findUnique({ where: { username: normalizedUsername } });
+  } catch (error) {
+    console.error("Username availability lookup failed", error);
+    return NextResponse.json(
+      { available: false, message: "Username lookup is temporarily unavailable." },
+      { status: 503 }
+    );
+  }
 
   if (existing) {
     return NextResponse.json({ available: false, message: "Username is already taken." });

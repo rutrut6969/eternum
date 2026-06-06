@@ -11,6 +11,17 @@ export function normalizeUsername(username: string) {
   return username.trim().toLowerCase();
 }
 
+export function usernameFromDisplayName(displayName: string) {
+  return displayName
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 24);
+}
+
 export function validateUsername(username: string) {
   const trimmed = username.trim();
   if (trimmed.length < 3 || trimmed.length > 24) {

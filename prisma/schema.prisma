@@ -102,6 +102,27 @@ enum TokenKind {
   OBJECT
 }
 
+enum MapVisibility {
+  CAMPAIGN_ONLY
+  PRIVATE_USER
+  PUBLIC_LIBRARY
+}
+
+enum MapApprovalStatus {
+  DRAFT
+  PENDING_DM_REVIEW
+  APPROVED_PRIVATE
+  APPROVED_PUBLIC
+  REJECTED
+  ARCHIVED
+}
+
+enum MapGridType {
+  SQUARE
+  HEX
+  NONE
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -425,24 +446,71 @@ model CharacterMilestone {
 }
 
 model Map {
-  id          String   @id @default(cuid())
-  campaignId  String
-  sessionId   String?
-  name        String
-  description String?
-  width       Int      @default(30)
-  height      Int      @default(30)
-  gridSize    Int      @default(70)
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    String            @id @default(cuid())
+  campaignId            String?
+  sessionId             String?
+  name                  String
+  description           String?
+  visibility            MapVisibility     @default(CAMPAIGN_ONLY)
+  approvalStatus        MapApprovalStatus @default(DRAFT)
+  gridType              MapGridType       @default(SQUARE)
+  width                 Int               @default(30)
+  height                Int               @default(30)
+  gridWidth             Int               @default(30)
+  gridHeight            Int               @default(30)
+  gridSize              Int               @default(70)
+  recommendedPartyLevel Int?
+  environment           String?
+  theme                 String?
+  prompt                String?           @db.Text
+  interactiveNotes      String?           @db.Text
+  spawnPoints           Json              @default("[]")
+  lightingNotes         String?           @db.Text
+  encounterSuggestions  Json              @default("[]")
+  createdById           String
+  publishedAt           DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
-  campaign  Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaign  Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   session   CampaignSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   createdBy User             @relation("MapCreator", fields: [createdById], references: [id])
+  images    MapImage[]
+  tags      MapTag[]
   layers    MapLayer[]
   tokens    MapToken[]
   encounters CombatEncounter[]
+
+  @@index([approvalStatus, visibility])
+  @@index([campaignId])
+  @@index([sessionId])
+}
+
+model MapImage {
+  id            String   @id @default(cuid())
+  mapId         String
+  imageUrl      String
+  imagePrompt   String?  @db.Text
+  imageAltText  String?
+  generatedByAi Boolean  @default(false)
+  blobPath      String?
+  width         Int?
+  height        Int?
+  createdAt     DateTime @default(now())
+
+  map Map @relation(fields: [mapId], references: [id], onDelete: Cascade)
+}
+
+model MapTag {
+  id        String   @id @default(cuid())
+  mapId     String
+  label     String
+  category  String?
+  createdAt DateTime @default(now())
+
+  map Map @relation(fields: [mapId], references: [id], onDelete: Cascade)
+
+  @@unique([mapId, label])
 }
 
 model MapLayer {

@@ -44,6 +44,9 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Publish-to-public flow allows authors to request public publication after private approval and lets DMs confirm publication.
 - Public library is database-backed and only shows `APPROVED_PUBLIC` content with `PUBLIC_LIBRARY` visibility.
 - Public library filters include content type, rarity, discipline, profession requirement, creator, campaign source, and name/description search.
+- Public library Prisma query is now defensive: it filters only safe scalar fields in Prisma and moves fuzzy/search/JSON filters into application-side filtering with friendly error handling.
+- Registration usernames can auto-generate from Display Name, stop auto-updating after manual edits, and reset from display name on demand.
+- Registration and username availability APIs now catch Prisma lookup/create errors and return friendly messages instead of crashing pages.
 - Validation utilities cover email token generation/expiry, invite token status, member role safety, and Blob upload type/size checks.
 - Campaign session infrastructure with planned, active, completed, and archived session states.
 - DM session controls for create, start, end, and archive.
@@ -53,6 +56,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Server-side event bus abstraction with `eventBus.publish()` and `eventBus.subscribe()` for future realtime updates.
 - Campaign timeline UI combining sessions, notes, activity, homebrew events, and character milestones.
 - VTT foundation schema and placeholder UI for maps, map layers, tokens, combat encounters, and initiative entries.
+- AI-generated map support foundation with map visibility/status enums, map image records, map tags, AI prompt metadata, grid type/dimensions, party level, notes, spawn points, lighting notes, encounter suggestions, public map library search, and public map clone/import API.
+- Top-down battle map prompt template utility that enforces VTT-friendly perspective, no labels, grid alignment, clear terrain, and high contrast.
 - Character milestone tracking for profession levels, learned spells, crafted items, affinity gains, loot awards, and notable achievements.
 - True campaign dashboard at `/dashboard/campaigns/[campaignId]` with active session, recent activity, members, characters, notes, homebrew awaiting approval, session history, timeline, and VTT data placeholders.
 - Vitest test setup with coverage for session transitions, timeline generation, milestone generation, invite token handling, member role safety, upload validation, and email token expiry.
@@ -76,6 +81,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Session notes support markdown storage and mobile display, but there is no rich markdown editor or sanitizer yet.
 - Activity feed is persisted and displayed, but realtime delivery is still only an abstraction.
 - VTT data models and placeholder APIs exist, but map rendering, dynamic lighting, drag/drop tokens, and combat UI are intentionally not implemented.
+- AI map generation is planned but not fully implemented: prompts, metadata, library, clone/import, and image records exist, but the OpenAI image generation call and generated Blob upload pipeline are not wired yet.
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
 
 ## Known Issues
@@ -88,22 +94,23 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Existing development databases with users may need a migration/backfill strategy before making `username` required in production.
 - Existing development databases need `npm run db:push` after this pass to add homebrew metadata columns.
 - Public library profession filtering currently filters JSON requirements in application code after fetching approved public records.
+- Public library search intentionally avoids Prisma JSON filtering and relation/fuzzy filters in the database query; creator/campaign/profession/search filters run in application code after fetching approved public records.
 - Resend requires a verified sending domain for production email delivery.
 - If `RESEND_API_KEY` is missing, registration still creates the account but verification email sending reports the configuration issue.
 - Blob image upload requires `BLOB_READ_WRITE_TOKEN`; otherwise upload requests return a configuration error.
 - Resend verification support is preserved, but production delivery is temporarily optional because sending-domain setup is limited.
 - Legacy `SessionNote` remains in the schema for compatibility while new notes use `CampaignNote`.
-- Session/activity/VTT schema changes require another `npm run db:push` on development databases.
+- Session/activity/VTT/map schema changes require `npm run db:push` on development databases.
 
 ## Next Recommended Steps
 
-1. Run `npm run db:push` against the development database to apply the expanded schema.
-2. Add realtime transport behind `eventBus` for activity, dice, and session updates.
-3. Add full VTT map renderer, token movement, encounter UI, and dynamic lighting later.
-4. Add invite email delivery after Resend production domain delivery is ready.
-5. Upgrade gameplay editors with richer domain-specific validation and edit-in-place flows.
-6. Add route-level database tests for session APIs, notes, activity creation, and VTT records.
-7. Add realtime roll updates and richer campaign activity logs.
+1. Wire the AI map generation service call and Blob save path behind the new map prompt/image models.
+2. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
+3. Add realtime transport behind `eventBus` for activity, dice, and session updates.
+4. Add full VTT map renderer, token movement, encounter UI, and dynamic lighting later.
+5. Add invite email delivery after Resend production domain delivery is ready.
+6. Upgrade gameplay editors with richer domain-specific validation and edit-in-place flows.
+7. Add route-level database tests for session APIs, notes, activity creation, VTT records, and map clone/import.
 
 ## Setup
 
@@ -142,6 +149,8 @@ Usernames:
 - No spaces.
 - Stored as normalized lowercase `username` for uniqueness.
 - Optional `displayUsername` preserves chosen casing for future UI use.
+- Register form auto-generates usernames from Display Name using lowercase text, underscores for spaces, invalid-character removal, repeated-underscore collapse, and a 24-character limit until the username is manually edited.
+- The username field includes a mobile-friendly reset button to regenerate from Display Name.
 
 Passwords:
 
@@ -174,6 +183,17 @@ Production Resend delivery is temporarily optional while the sending domain is l
 3. Use homebrew portfolio or approval cards to upload JPG, PNG, WebP, or GIF images up to 5MB.
 4. Uploaded URLs are stored on homebrew records and displayed in approvals, inventory-style cards, and the public library.
 
+## AI Map Generation Foundation
+
+- Map records support `MapVisibility`: `CAMPAIGN_ONLY`, `PRIVATE_USER`, and `PUBLIC_LIBRARY`.
+- Map records support `MapApprovalStatus`: `DRAFT`, `PENDING_DM_REVIEW`, `APPROVED_PRIVATE`, `APPROVED_PUBLIC`, `REJECTED`, and `ARCHIVED`.
+- Map records support uploaded or AI-generated images through `MapImage`.
+- Map metadata supports prompts, grid type, grid width/height, recommended party level, environment/theme tags, interactive notes, spawn point JSON, lighting notes, and encounter suggestion JSON.
+- Prompt templates require top-down battle maps, clear terrain, no text labels, grid-friendly alignment, and VTT-readable contrast by default.
+- Public map library search exists at `/maps` and filters by name/description, environment, theme, grid type, size, and creator.
+- Public map clone/import API foundation exists at `/api/maps/[mapId]/clone` for DMs to copy approved public maps into campaigns.
+- Full AI image generation is still planned; generated images should be saved to Blob storage before attaching to `MapImage`.
+
 ## Invite Links
 
 - DMs can create invite tokens from campaign management.
@@ -198,7 +218,7 @@ npm run prisma:deploy
 
 Production should use a managed PostgreSQL database such as Neon, Supabase, Render, Railway, or Vercel Postgres.
 
-This pass adds `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapLayer`, `MapToken`, `CombatEncounter`, and `InitiativeEntry`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, or VTT placeholders locally.
+Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, and `InitiativeEntry`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, or VTT placeholders locally.
 
 ## Deployment
 
@@ -257,6 +277,8 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Homebrew approval queue beyond backstory
 - [x] Publish-to-public request and DM confirmation flow
 - [x] Public library database search and filters
+- [x] Public library safe Prisma query and friendly error fallback
+- [x] Display-name-to-username autofill and reset behavior
 - [x] Image storage metadata foundation
 - [x] Blob image upload endpoint and UI
 - [x] Uploaded image rendering on homebrew, approval, inventory, and library cards
@@ -270,8 +292,13 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Character milestone tracking and display
 - [x] VTT foundation schema for maps, layers, tokens, encounters, and initiative
 - [x] VTT placeholder API and campaign dashboard panel
+- [x] AI map generation data model foundation
+- [x] Public map library page and safe search filters
+- [x] Public map clone/import API foundation
+- [x] Top-down VTT map prompt templates
 - [x] True campaign dashboard route
 - [x] Gameplay infrastructure tests
+- [x] Username autofill and map prompt utility tests
 - [x] Server-side dice roll foundation
 - [x] Dice roll UI and visibility filtering foundation
 - [x] DM reveal foundation for hidden rolls
@@ -290,10 +317,15 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Realtime transport behind event bus
 - [ ] Rich markdown editor and sanitization for notes
 - [ ] Route-level database tests for session/activity APIs
+- [ ] AI map generation service route and Blob save pipeline
+- [ ] Campaign UI for public map clone/import
 
 ### Planned
 
 - [ ] Session notes editor
+- [ ] AI-generated top-down map images
+- [ ] Uploaded map image attachment UI
+- [ ] Map approval/publication workflow UI
 - [ ] Discord integration
 - [ ] Full VTT map rendering
 - [ ] Dynamic lighting

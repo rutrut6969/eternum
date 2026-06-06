@@ -8,7 +8,8 @@ const mapSchema = z.object({
   name: z.string().min(2).max(160),
   sessionId: z.string().cuid().optional(),
   width: z.number().int().min(5).max(200).default(30),
-  height: z.number().int().min(5).max(200).default(30)
+  height: z.number().int().min(5).max(200).default(30),
+  gridType: z.enum(["SQUARE", "HEX", "NONE"]).default("SQUARE")
 });
 
 export async function GET(_request: Request, { params }: { params: Promise<{ campaignId: string }> }) {
@@ -24,7 +25,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cam
 
   const maps = await prisma.map.findMany({
     where: { campaignId },
-    include: { layers: true, tokens: true, encounters: { include: { initiative: true } } },
+    include: { images: true, tags: true, layers: true, tokens: true, encounters: { include: { initiative: true } } },
     orderBy: { updatedAt: "desc" }
   });
 
@@ -52,6 +53,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cam
       name: parsed.data.name,
       width: parsed.data.width,
       height: parsed.data.height,
+      gridWidth: parsed.data.width,
+      gridHeight: parsed.data.height,
+      gridType: parsed.data.gridType,
       createdById: userId,
       layers: { create: [{ name: "Base", order: 0 }] }
     },
