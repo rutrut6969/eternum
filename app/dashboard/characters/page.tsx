@@ -1,4 +1,6 @@
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { ResourceBars } from "@/components/resource-bars";
 import { BackstoryApprovalPanel } from "@/components/characters/backstory-approval-panel";
 import { CharacterWorkbench } from "@/components/characters/character-workbench";
 import { MilestoneList } from "@/components/characters/milestone-list";
@@ -7,6 +9,7 @@ import { HomebrewBuilder } from "@/components/homebrew/homebrew-builder";
 import { HomebrewPortfolio } from "@/components/homebrew/homebrew-portfolio";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { calculateMana, calculateStamina } from "@/lib/rules/resources";
 
 export default async function CharactersPage() {
   const user = await requireUser();
@@ -18,6 +21,7 @@ export default async function CharactersPage() {
   const characters = await prisma.character.findMany({
     where: { ownerId: user.id },
     include: {
+      campaign: { select: { name: true } },
       professionLevels: true,
       backstoryAnalyses: { orderBy: { createdAt: "desc" }, take: 3 },
       milestones: { orderBy: { createdAt: "desc" }, take: 20 }
@@ -114,7 +118,46 @@ export default async function CharactersPage() {
   return (
     <main className="mx-auto max-w-7xl px-5 py-12">
       <Badge tone="mana">Character Builder</Badge>
-      <h1 className="mt-5 text-4xl font-black text-white">Backstory-driven sheets</h1>
+      <h1 className="mt-5 text-4xl font-black text-white">Character workspace</h1>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">Create campaign-owned characters and manage their inventory, spells, professions, disciplines, traits, and AI backstory approvals.</p>
+      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {characters.length === 0 ? (
+          <Card>
+            <h2 className="text-xl font-bold text-white">No characters yet</h2>
+            <p className="mt-3 text-sm text-zinc-300">Use the creation panel below to make your first campaign character.</p>
+          </Card>
+        ) : null}
+        {characters.map((character) => {
+          const scores = {
+            str: character.strength,
+            dex: character.dexterity,
+            con: character.constitution,
+            int: character.intelligence,
+            wis: character.wisdom,
+            cha: character.charisma
+          };
+          const hp = 10 + character.level * 6 + Math.floor((character.constitution - 10) / 2) * character.level;
+          return (
+            <Card key={character.id}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-bold text-white">{character.name}</h2>
+                  <p className="mt-1 text-xs text-zinc-500">{character.campaign?.name || "No campaign"} / {[character.ancestry, character.className].filter(Boolean).join(" / ") || "Unclassed"}</p>
+                </div>
+                <Badge tone="gold">Level {character.level}</Badge>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs text-zinc-300">
+                <span className="rounded bg-black/25 p-2">HP {hp}</span>
+                <span className="rounded bg-black/25 p-2">{character.professionLevels.length} profs</span>
+                <span className="rounded bg-black/25 p-2">{Array.isArray(character.learnedSpells) ? character.learnedSpells.length : 0} spells</span>
+              </div>
+              <div className="mt-4">
+                <ResourceBars mana={calculateMana(character.level, scores, character.castingAbility ?? "WIS")} stamina={calculateStamina(character.level, scores)} />
+              </div>
+            </Card>
+          );
+        })}
+      </section>
       <div className="mt-8">
         <CharacterWorkbench campaigns={campaignOptions} characters={characterSummaries} />
       </div>
@@ -125,7 +168,7 @@ export default async function CharactersPage() {
         <HomebrewBuilder campaigns={campaignOptions} characters={characterSummaries.map((character) => ({ id: character.id, name: character.name, campaignId: character.campaignId }))} />
         <HomebrewPortfolio items={myHomebrewSummaries} />
       </div>
-      <div className="mt-8">
+      <div id="approvals" className="mt-8 scroll-mt-24">
         <BackstoryApprovalPanel analyses={pendingSummaries} />
       </div>
       <div className="mt-8">

@@ -8,6 +8,7 @@ import { requireCampaignMember } from "@/lib/campaign-auth";
 import { slugForHomebrew } from "@/lib/homebrew";
 import { prisma } from "@/lib/prisma";
 import { validateItemPower } from "@/lib/rules/items";
+import { recordAIUsage } from "@/lib/subscriptions/service";
 
 const schema = z.object({
   idea: z.string().min(20).max(4000),
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Campaign membership required." }, { status: 403 });
     }
   }
+  await recordAIUsage(userId);
 
   const client = getOpenAIClient();
   const completion = await client.chat.completions.create({

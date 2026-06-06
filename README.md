@@ -19,6 +19,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Resend-based email verification links with 24-hour secure tokens, branded email copy, `/verify-email`, and resend support.
 - Email verification feature gates for campaign creation and public homebrew publishing.
 - Account email status UI with a resend verification button.
+- Authenticated navigation now hides Sign In/Create Account and shows a session-aware avatar/account menu with profile links, logout, and attention indicator.
 - Protected dashboard routes using server-side session checks.
 - Campaign CRUD foundation: authenticated users can create campaigns, campaign creators receive DM and Player roles, DMs can edit name, description, JSON settings, and archive campaigns.
 - Campaign membership role arrays support DM, Player, Assistant DM, Spectator, and mixed-role users.
@@ -45,6 +46,10 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Public library is database-backed and only shows `APPROVED_PUBLIC` content with `PUBLIC_LIBRARY` visibility.
 - Public library filters include content type, rarity, discipline, profession requirement, creator, campaign source, and name/description search.
 - Public library Prisma query is now defensive: it filters only safe scalar fields in Prisma and moves fuzzy/search/JSON filters into application-side filtering with friendly error handling.
+- Pricing page foundation at `/pricing` with planned Free, DM, Worldbuilder, and Founder tiers. No payment buttons or checkout flows exist yet.
+- Subscription and billing schema foundation for `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, and `AIUsage`.
+- Subscription feature-gate service foundation with `canCreateCampaign()`, `canUseAdvancedAI()`, `canPublishPublicHomebrew()`, `canUseFutureMapGeneration()`, and `canUseFutureDiscordFeatures()`.
+- Monthly AI usage tracking is wired into backstory, spell, and item AI routes after authorization checks.
 - Registration usernames can auto-generate from Display Name, stop auto-updating after manual edits, and reset from display name on demand.
 - Registration and username availability APIs now catch Prisma lookup/create errors and return friendly messages instead of crashing pages.
 - Validation utilities cover email token generation/expiry, invite token status, member role safety, and Blob upload type/size checks.
@@ -60,6 +65,14 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Top-down battle map prompt template utility that enforces VTT-friendly perspective, no labels, grid alignment, clear terrain, and high contrast.
 - Character milestone tracking for profession levels, learned spells, crafted items, affinity gains, loot awards, and notable achievements.
 - True campaign dashboard at `/dashboard/campaigns/[campaignId]` with active session, recent activity, members, characters, notes, homebrew awaiting approval, session history, timeline, and VTT data placeholders.
+- Logged-in workspace redesign with session-aware top navigation, mobile bottom dashboard navigation, softer card styling, denser overview cards, quick actions, and discoverable routes.
+- Dashboard overview now shows active campaigns, characters, pending approvals, recent dice rolls, recent homebrew, public library shortcuts, invite acceptance, email verification notice, and quick create actions.
+- Dedicated workspace routes: `/dashboard/account`, `/dashboard/homebrew`, `/dashboard/homebrew/spells/new`, `/dashboard/homebrew/items/new`, and `/dashboard/maps`.
+- Campaign workspace now separates campaigns the user DMs, campaigns they play in, archived campaigns, join-invite actions, and richer campaign state cards.
+- Character workspace now includes mobile-friendly character cards with campaign, level, HP placeholder, mana/stamina bars, spell count, and profession count before the full editor.
+- Homebrew workspace now groups authored content by draft, pending review, approved private, published public, and rejected/archived status lanes.
+- Account workspace displays display name, username, email verification status, subscription placeholder, AI usage counts, linked-account placeholder, and Obsidian Systems branding.
+- Footer branding now displays "Powered by Obsidian Systems LLC" across public and logged-in pages.
 - Vitest test setup with coverage for session transitions, timeline generation, milestone generation, invite token handling, member role safety, upload validation, and email token expiry.
 - Eternum rules modules for ability modifiers, mana, stamina, spell tiers, spell infusion, homebrew status, disciplines, necromancy branches, and professions.
 - OpenAI integration helpers and API routes for backstory and custom spell suggestions.
@@ -83,6 +96,10 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - VTT data models and placeholder APIs exist, but map rendering, dynamic lighting, drag/drop tokens, and combat UI are intentionally not implemented.
 - AI map generation is planned but not fully implemented: prompts, metadata, library, clone/import, and image records exist, but the OpenAI image generation call and generated Blob upload pipeline are not wired yet.
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
+- Subscription models, feature gates, pricing page, and AI usage tracking exist, but Square checkout, webhooks, billing portal, invoices, and plan enforcement are intentionally not implemented.
+- Homebrew spell/item builder routes are usable entry points, but rich field-level spell/item editors and post-save image-upload handoff are still basic.
+- Dashboard navigation is functional and mobile-friendly, but active-route highlighting and richer notification detail views are still planned.
+- Account settings display user data, but editable profile fields and linked account management are still placeholders.
 
 ## Known Issues
 
@@ -101,16 +118,18 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Resend verification support is preserved, but production delivery is temporarily optional because sending-domain setup is limited.
 - Legacy `SessionNote` remains in the schema for compatibility while new notes use `CampaignNote`.
 - Session/activity/VTT/map schema changes require `npm run db:push` on development databases.
+- Subscription/billing schema changes require `npm run db:push` on development databases.
+- Square integration is planned only; no checkout, webhooks, billing logic, or subscription enforcement should be expected yet.
 
 ## Next Recommended Steps
 
-1. Wire the AI map generation service call and Blob save path behind the new map prompt/image models.
-2. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
-3. Add realtime transport behind `eventBus` for activity, dice, and session updates.
-4. Add full VTT map renderer, token movement, encounter UI, and dynamic lighting later.
-5. Add invite email delivery after Resend production domain delivery is ready.
-6. Upgrade gameplay editors with richer domain-specific validation and edit-in-place flows.
-7. Add route-level database tests for session APIs, notes, activity creation, VTT records, and map clone/import.
+1. Add Square checkout planning documents and webhook route stubs once billing requirements are finalized.
+2. Wire feature gates into specific routes only after plan limits and launch policy are agreed.
+3. Add active-route highlighting and richer notification detail views for the authenticated account menu.
+4. Wire the AI map generation service call and Blob save path behind the new map prompt/image models.
+5. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
+6. Add realtime transport behind `eventBus` for activity, dice, and session updates.
+7. Upgrade gameplay editors with richer domain-specific validation and edit-in-place flows.
 
 ## Setup
 
@@ -139,6 +158,8 @@ Open [http://localhost:3000](http://localhost:3000).
 `EMAIL_VERIFICATION_PROVIDER` and `EMAIL_VERIFICATION_API_KEY` have been deprecated in favor of Resend verification links.
 
 No new environment variables were added in this pass.
+
+Square subscription integration is planned but not implemented. Future billing work is expected to add Square environment variables such as application credentials, location IDs, webhook signatures, and checkout settings once the provider design is finalized.
 
 ## Account Rules
 
@@ -194,6 +215,16 @@ Production Resend delivery is temporarily optional while the sending domain is l
 - Public map clone/import API foundation exists at `/api/maps/[mapId]/clone` for DMs to copy approved public maps into campaigns.
 - Full AI image generation is still planned; generated images should be saved to Blob storage before attaching to `MapImage`.
 
+## Subscription and Billing Foundation
+
+- Planned tiers are `FREE`, `DM`, `WORLDBUILDER`, and `FOUNDER`.
+- `SubscriptionPlan` stores tier metadata, planned prices, sort order, and feature JSON.
+- `UserSubscription` stores the active user plan, status, start/expiry dates, `squareCustomerId`, and `squareSubscriptionId`.
+- `BillingEvent` stores future provider events and webhook payloads. Provider defaults to `square`.
+- `AIUsage` stores monthly request counts by user and month.
+- `subscriptionService` centralizes feature-gate decisions for campaign creation, advanced AI, public homebrew publishing, future map generation, and future Discord features.
+- The current pass does not implement Square checkout, Square webhooks, billing logic, subscription enforcement, Stripe, or payment processing.
+
 ## Invite Links
 
 - DMs can create invite tokens from campaign management.
@@ -218,7 +249,7 @@ npm run prisma:deploy
 
 Production should use a managed PostgreSQL database such as Neon, Supabase, Render, Railway, or Vercel Postgres.
 
-Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, and `InitiativeEntry`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, or VTT placeholders locally.
+Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, and `AIUsage`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, AI usage tracking, or VTT placeholders locally.
 
 ## Deployment
 
@@ -255,6 +286,9 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Email verification schema prep
 - [x] Resend email verification links
 - [x] Account email status and resend UI
+- [x] Session-aware authenticated account menu
+- [x] Logged-out Sign In/Create Account nav state
+- [x] Subtle global Obsidian Systems LLC footer branding
 - [x] Verification gates for campaign creation and public publishing
 - [x] Dashboard route protection
 - [x] Campaign CRUD foundation
@@ -278,6 +312,10 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Publish-to-public request and DM confirmation flow
 - [x] Public library database search and filters
 - [x] Public library safe Prisma query and friendly error fallback
+- [x] Pricing page foundation
+- [x] Subscription plan/user subscription/billing event schema foundation
+- [x] Subscription feature gate service foundation
+- [x] AI usage tracking schema and route increments
 - [x] Display-name-to-username autofill and reset behavior
 - [x] Image storage metadata foundation
 - [x] Blob image upload endpoint and UI
@@ -297,6 +335,17 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Public map clone/import API foundation
 - [x] Top-down VTT map prompt templates
 - [x] True campaign dashboard route
+- [x] Logged-in workspace redesign
+- [x] Dashboard workspace navigation
+- [x] Mobile dashboard bottom nav
+- [x] Dashboard overview quick actions and summary cards
+- [x] Account workspace route
+- [x] Homebrew workspace route
+- [x] Spell builder entry route
+- [x] Item builder entry route
+- [x] Maps workspace route
+- [x] Campaign workspace summary sections
+- [x] Character workspace summary cards
 - [x] Gameplay infrastructure tests
 - [x] Username autofill and map prompt utility tests
 - [x] Server-side dice roll foundation
@@ -319,10 +368,18 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Route-level database tests for session/activity APIs
 - [ ] AI map generation service route and Blob save pipeline
 - [ ] Campaign UI for public map clone/import
+- [ ] Square checkout design and route stubs
+- [ ] Active route highlighting for workspace navigation
+- [ ] Editable account profile settings
+- [ ] Richer notification inbox/details
 
 ### Planned
 
 - [ ] Session notes editor
+- [ ] Square checkout
+- [ ] Square webhooks
+- [ ] Subscription billing portal
+- [ ] Subscription enforcement policy
 - [ ] AI-generated top-down map images
 - [ ] Uploaded map image attachment UI
 - [ ] Map approval/publication workflow UI

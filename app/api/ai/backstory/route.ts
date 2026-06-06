@@ -6,6 +6,7 @@ import { hasDmPermission } from "@/lib/campaign-auth";
 import { getOpenAIClient, openAIModel } from "@/lib/ai/openai";
 import { backstorySystemPrompt } from "@/lib/ai/prompts";
 import { prisma } from "@/lib/prisma";
+import { recordAIUsage } from "@/lib/subscriptions/service";
 
 const schema = z.object({
   characterId: z.string().cuid(),
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
   if (!character || character.ownerId !== userId) {
     return NextResponse.json({ error: "Character not found." }, { status: 404 });
   }
+  await recordAIUsage(userId);
 
   const client = getOpenAIClient();
   const completion = await client.chat.completions.create({
