@@ -1,8 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { createActivity } from "@/lib/activity";
 import { getCurrentUserId } from "@/lib/auth/session";
 import { hasDmPermission } from "@/lib/campaign-auth";
+import { milestoneForGameplayChange } from "@/lib/milestones";
 import { prisma } from "@/lib/prisma";
 
 const gameplayFields = [
@@ -72,6 +74,36 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
     where: { id: character.id },
     data: { [parsed.data.field]: next as Prisma.InputJsonValue }
   });
+
+  if (parsed.data.action === "add" && parsed.data.value !== undefined) {
+    const milestone = milestoneForGameplayChange(parsed.data.field, parsed.data.value);
+    if (milestone) {
+      await prisma.characterMilestone.create({
+        data: {
+          characterId: character.id,
+          campaignId: character.campaignId,
+          type: milestone.type,
+          title: milestone.title,
+          metadata: milestone.metadata
+        }
+      });
+      if (character.campaignId) {
+        await createActivity({
+          campaignId: character.campaignId,
+          actorId: userId,
+          type: milestone.type,
+          metadata: { characterId: character.id, characterName: character.name, ...((milestone.metadata as object) ?? {}) }
+        });
+      }
+    } else if (character.campaignId) {
+      await createActivity({
+        campaignId: character.campaignId,
+        actorId: userId,
+        type: "CHARACTER_UPDATED",
+        metadata: { characterId: character.id, characterName: character.name, field: parsed.data.field }
+      });
+    }
+  }
 
   return NextResponse.json({ character: updated });
 }

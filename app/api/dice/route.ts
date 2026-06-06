@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { createActivity } from "@/lib/activity";
 import { authOptions } from "@/lib/auth/options";
 import { hasDmPermission, requireCampaignMember } from "@/lib/campaign-auth";
 import { prisma } from "@/lib/prisma";
@@ -54,6 +55,13 @@ export async function POST(request: Request) {
       total: result.total,
       detail: result
     }
+  });
+
+  await createActivity({
+    campaignId: parsed.data.campaignId,
+    actorId: userId,
+    type: "DICE_ROLLED",
+    metadata: { rollId: roll.id, expression: roll.expression, total: roll.total, visibility: roll.visibility, label: roll.label }
   });
 
   return NextResponse.json({ roll });

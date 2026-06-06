@@ -35,6 +35,7 @@ type CharacterSummary = {
   undeadServants: unknown[];
   professionLevels: Array<{ profession: string; level: number; xp: number }>;
   backstoryAnalyses: Array<{ id: string; status: string; dmNotes: string | null }>;
+  milestones: Array<{ id: string; title: string; type: string; createdAt: string }>;
 };
 
 export function CharacterWorkbench({ campaigns, characters }: { campaigns: CampaignOption[]; characters: CharacterSummary[] }) {

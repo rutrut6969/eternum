@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { createActivity } from "@/lib/activity";
 import { getCurrentUserId } from "@/lib/auth/session";
 import { hasDmPermission } from "@/lib/campaign-auth";
+import { professionMilestone } from "@/lib/milestones";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -36,6 +38,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
       create: { characterId, profession: parsed.data.profession, level: parsed.data.level, xp: parsed.data.xp },
       update: { level: parsed.data.level, xp: parsed.data.xp }
     });
+    const milestone = professionMilestone(parsed.data.profession, parsed.data.level);
+    await prisma.characterMilestone.create({
+      data: {
+        characterId,
+        campaignId: character.campaignId,
+        type: milestone.type,
+        title: milestone.title,
+        metadata: milestone.metadata
+      }
+    });
+    if (character.campaignId) {
+      await createActivity({
+        campaignId: character.campaignId,
+        actorId: userId,
+        type: "PROFESSION_LEVEL_GAINED",
+        metadata: { characterId, profession: parsed.data.profession, level: parsed.data.level }
+      });
+    }
   }
 
   const professions = await prisma.professionProgress.findMany({ where: { characterId }, orderBy: { profession: "asc" } });

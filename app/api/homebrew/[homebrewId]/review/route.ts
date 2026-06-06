@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { createActivity } from "@/lib/activity";
 import { getCurrentUserId } from "@/lib/auth/session";
 import { requireCampaignDm } from "@/lib/campaign-auth";
 import { prisma } from "@/lib/prisma";
@@ -55,6 +56,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ho
       publishedAt: parsed.data.action === "approve_public" ? new Date() : content.publishedAt
     }
   });
+
+  if (parsed.data.action === "approve_private" || parsed.data.action === "approve_public") {
+    await createActivity({
+      campaignId: content.campaignId,
+      actorId: userId,
+      type: parsed.data.action === "approve_public" ? "HOMEBREW_PUBLISHED" : "HOMEBREW_APPROVED",
+      metadata: { homebrewId: content.id, title: content.title, contentType: content.type, status }
+    });
+  }
 
   if (parsed.data.action === "approve_private" || parsed.data.action === "approve_public") {
     const body = content.body && typeof content.body === "object" && !Array.isArray(content.body) ? content.body : {};

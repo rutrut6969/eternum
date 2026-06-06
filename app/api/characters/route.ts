@@ -1,6 +1,7 @@
 import { CampaignRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { createActivity } from "@/lib/activity";
 import { getCurrentUserId } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -44,6 +45,13 @@ export async function POST(request: Request) {
       castingAbility: parsed.data.castingAbility,
       backstory: parsed.data.backstory
     }
+  });
+
+  await createActivity({
+    campaignId: parsed.data.campaignId,
+    actorId: userId,
+    type: "CHARACTER_CREATED",
+    metadata: { characterId: character.id, name: character.name }
   });
 
   return NextResponse.json({ character }, { status: 201 });

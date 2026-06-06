@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { BackstoryApprovalPanel } from "@/components/characters/backstory-approval-panel";
 import { CharacterWorkbench } from "@/components/characters/character-workbench";
+import { MilestoneList } from "@/components/characters/milestone-list";
 import { HomebrewApprovalPanel } from "@/components/homebrew/homebrew-approval-panel";
 import { HomebrewBuilder } from "@/components/homebrew/homebrew-builder";
 import { HomebrewPortfolio } from "@/components/homebrew/homebrew-portfolio";
@@ -18,7 +19,8 @@ export default async function CharactersPage() {
     where: { ownerId: user.id },
     include: {
       professionLevels: true,
-      backstoryAnalyses: { orderBy: { createdAt: "desc" }, take: 3 }
+      backstoryAnalyses: { orderBy: { createdAt: "desc" }, take: 3 },
+      milestones: { orderBy: { createdAt: "desc" }, take: 20 }
     },
     orderBy: { updatedAt: "desc" }
   });
@@ -73,7 +75,8 @@ export default async function CharactersPage() {
     tamedCreatures: Array.isArray(character.tamedCreatures) ? character.tamedCreatures : [],
     undeadServants: Array.isArray(character.undeadServants) ? character.undeadServants : [],
     professionLevels: character.professionLevels.map((profession) => ({ profession: profession.profession, level: profession.level, xp: profession.xp })),
-    backstoryAnalyses: character.backstoryAnalyses.map((analysis) => ({ id: analysis.id, status: analysis.status, dmNotes: analysis.dmNotes }))
+    backstoryAnalyses: character.backstoryAnalyses.map((analysis) => ({ id: analysis.id, status: analysis.status, dmNotes: analysis.dmNotes })),
+    milestones: character.milestones.map((milestone) => ({ id: milestone.id, title: milestone.title, type: milestone.type, createdAt: milestone.createdAt.toISOString() }))
   }));
   const pendingSummaries = pendingAnalyses.map((analysis) => ({
     id: analysis.id,
@@ -114,6 +117,9 @@ export default async function CharactersPage() {
       <h1 className="mt-5 text-4xl font-black text-white">Backstory-driven sheets</h1>
       <div className="mt-8">
         <CharacterWorkbench campaigns={campaignOptions} characters={characterSummaries} />
+      </div>
+      <div className="mt-8">
+        <MilestoneList milestones={characterSummaries.flatMap((character) => character.milestones)} />
       </div>
       <div className="mt-8 grid gap-5 xl:grid-cols-[1fr_0.75fr]">
         <HomebrewBuilder campaigns={campaignOptions} characters={characterSummaries.map((character) => ({ id: character.id, name: character.name, campaignId: character.campaignId }))} />

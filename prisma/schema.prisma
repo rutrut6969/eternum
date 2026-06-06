@@ -65,6 +65,43 @@ enum CastingAbility {
   WIS
 }
 
+enum CampaignSessionStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum ActivityType {
+  CHARACTER_CREATED
+  CHARACTER_UPDATED
+  HOMEBREW_APPROVED
+  HOMEBREW_PUBLISHED
+  SESSION_CREATED
+  SESSION_STARTED
+  SESSION_ENDED
+  DICE_ROLLED
+  LOOT_AWARDED
+  PROFESSION_LEVEL_GAINED
+  SPELL_LEARNED
+  ITEM_CRAFTED
+  AFFINITY_GAINED
+  NOTE_CREATED
+}
+
+enum NoteVisibility {
+  DM_ONLY
+  CAMPAIGN_SHARED
+  CHARACTER_PRIVATE
+}
+
+enum TokenKind {
+  CHARACTER
+  MONSTER
+  NPC
+  OBJECT
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -89,6 +126,10 @@ model User {
   homebrew       HomebrewContent[]
   diceRolls      DiceRoll[]
   approvals      ApprovalRequest[] @relation("ApprovalReviewer")
+  campaignSessions CampaignSession[] @relation("CampaignSessionCreator")
+  activityLogs   ActivityLog[] @relation("ActivityActor")
+  campaignNotes  CampaignNote[] @relation("CampaignNoteAuthor")
+  mapsCreated    Map[] @relation("MapCreator")
 }
 
 model Account {
@@ -145,6 +186,12 @@ model Campaign {
   homebrew   HomebrewContent[]
   diceRolls  DiceRoll[]
   approvals  ApprovalRequest[]
+  campaignSessions CampaignSession[]
+  activityLogs ActivityLog[]
+  campaignNotes CampaignNote[]
+  characterMilestones CharacterMilestone[]
+  maps       Map[]
+  combatEncounters CombatEncounter[]
 }
 
 model CampaignMember {
@@ -210,6 +257,10 @@ model Character {
   professionLevels ProfessionProgress[]
   backstoryAnalyses BackstoryAnalysis[]
   diceRolls        DiceRoll[]
+  campaignNotes    CampaignNote[]
+  milestones       CharacterMilestone[]
+  mapTokens        MapToken[]
+  initiativeEntries InitiativeEntry[]
 }
 
 model ProfessionProgress {
@@ -295,6 +346,168 @@ model SessionNote {
   updatedAt  DateTime @updatedAt
 
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model CampaignSession {
+  id            String                @id @default(cuid())
+  campaignId    String
+  title         String
+  description   String?               @db.Text
+  sessionNumber Int
+  status        CampaignSessionStatus @default(PLANNED)
+  startedAt     DateTime?
+  endedAt       DateTime?
+  createdById   String
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  campaign   Campaign          @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  createdBy  User              @relation("CampaignSessionCreator", fields: [createdById], references: [id])
+  activities ActivityLog[]
+  notes      CampaignNote[]
+  milestones CharacterMilestone[]
+  maps       Map[]
+  encounters CombatEncounter[]
+
+  @@unique([campaignId, sessionNumber])
+}
+
+model ActivityLog {
+  id          String       @id @default(cuid())
+  campaignId  String
+  sessionId   String?
+  actorId     String?
+  type        ActivityType
+  metadata    Json         @default("{}")
+  createdAt   DateTime     @default(now())
+
+  campaign Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  session  CampaignSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  actor    User?            @relation("ActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId, createdAt])
+  @@index([sessionId, createdAt])
+}
+
+model CampaignNote {
+  id          String         @id @default(cuid())
+  campaignId  String
+  sessionId   String?
+  authorId    String
+  characterId String?
+  title       String
+  body        String         @db.Text
+  visibility  NoteVisibility @default(CAMPAIGN_SHARED)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  campaign  Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  session   CampaignSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  author    User             @relation("CampaignNoteAuthor", fields: [authorId], references: [id])
+  character Character?       @relation(fields: [characterId], references: [id], onDelete: SetNull)
+}
+
+model CharacterMilestone {
+  id          String       @id @default(cuid())
+  characterId String
+  campaignId  String?
+  sessionId   String?
+  type        ActivityType
+  title       String
+  metadata    Json         @default("{}")
+  createdAt   DateTime     @default(now())
+
+  character Character        @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  campaign  Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  session   CampaignSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([characterId, createdAt])
+}
+
+model Map {
+  id          String   @id @default(cuid())
+  campaignId  String
+  sessionId   String?
+  name        String
+  description String?
+  width       Int      @default(30)
+  height      Int      @default(30)
+  gridSize    Int      @default(70)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaign  Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  session   CampaignSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  createdBy User             @relation("MapCreator", fields: [createdById], references: [id])
+  layers    MapLayer[]
+  tokens    MapToken[]
+  encounters CombatEncounter[]
+}
+
+model MapLayer {
+  id       String  @id @default(cuid())
+  mapId    String
+  name     String
+  order    Int     @default(0)
+  visible  Boolean @default(true)
+  locked   Boolean @default(false)
+  data     Json    @default("{}")
+
+  map Map @relation(fields: [mapId], references: [id], onDelete: Cascade)
+}
+
+model MapToken {
+  id          String    @id @default(cuid())
+  mapId       String
+  characterId String?
+  kind        TokenKind @default(CHARACTER)
+  name        String
+  monsterRef  String?
+  x           Float     @default(0)
+  y           Float     @default(0)
+  size        Float     @default(1)
+  hp          Int?
+  maxHp       Int?
+  hidden      Boolean   @default(false)
+  metadata    Json      @default("{}")
+
+  map       Map        @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  character Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  initiativeEntries InitiativeEntry[]
+}
+
+model CombatEncounter {
+  id          String   @id @default(cuid())
+  campaignId  String
+  sessionId   String?
+  mapId       String?
+  name        String
+  status      String   @default("planned")
+  round       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaign Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  session  CampaignSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  map      Map?             @relation(fields: [mapId], references: [id], onDelete: SetNull)
+  initiative InitiativeEntry[]
+}
+
+model InitiativeEntry {
+  id          String  @id @default(cuid())
+  encounterId String
+  characterId String?
+  tokenId     String?
+  name        String
+  initiative  Int
+  order       Int
+  active      Boolean @default(false)
+  metadata    Json    @default("{}")
+
+  encounter CombatEncounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  character Character?      @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  token     MapToken?       @relation(fields: [tokenId], references: [id], onDelete: SetNull)
 }
 
 model DiceRoll {

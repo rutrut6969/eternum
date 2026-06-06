@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +120,9 @@ export function CampaignManager({ campaigns }: { campaigns: CampaignSummary[] })
               <div className="min-w-0">
                 <input className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xl font-bold text-white outline-none focus:border-aureate" defaultValue={campaign.name} onBlur={(event) => updateCampaign(campaign.id, "name", event.target.value)} />
                 <textarea className="mt-3 min-h-20 w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-200 outline-none focus:border-aureate" defaultValue={campaign.description ?? ""} placeholder="Campaign description" onBlur={(event) => updateCampaign(campaign.id, "description", event.target.value)} />
+                <Link className="mt-3 inline-flex rounded-md border border-mana/30 px-3 py-2 text-sm font-semibold text-mana" href={`/dashboard/campaigns/${campaign.id}`}>
+                  Open campaign dashboard
+                </Link>
               </div>
               <button className="rounded-md border border-crimson/30 px-4 py-2 text-sm font-semibold text-crimson hover:bg-crimson/10" onClick={() => archiveCampaign(campaign.id)} type="button">
                 Archive

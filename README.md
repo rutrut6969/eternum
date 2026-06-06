@@ -45,6 +45,17 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Public library is database-backed and only shows `APPROVED_PUBLIC` content with `PUBLIC_LIBRARY` visibility.
 - Public library filters include content type, rarity, discipline, profession requirement, creator, campaign source, and name/description search.
 - Validation utilities cover email token generation/expiry, invite token status, member role safety, and Blob upload type/size checks.
+- Campaign session infrastructure with planned, active, completed, and archived session states.
+- DM session controls for create, start, end, and archive.
+- Players can view campaign sessions and session history from the campaign dashboard.
+- Campaign activity log model and feed for character creation, updates, dice rolls, session events, notes, homebrew approvals/publications, loot, profession gains, spell learning, item crafting, and affinity gains.
+- Session/campaign/character note model with markdown body storage and visibility modes for DM-only, campaign-shared, and character-private notes.
+- Server-side event bus abstraction with `eventBus.publish()` and `eventBus.subscribe()` for future realtime updates.
+- Campaign timeline UI combining sessions, notes, activity, homebrew events, and character milestones.
+- VTT foundation schema and placeholder UI for maps, map layers, tokens, combat encounters, and initiative entries.
+- Character milestone tracking for profession levels, learned spells, crafted items, affinity gains, loot awards, and notable achievements.
+- True campaign dashboard at `/dashboard/campaigns/[campaignId]` with active session, recent activity, members, characters, notes, homebrew awaiting approval, session history, timeline, and VTT data placeholders.
+- Vitest test setup with coverage for session transitions, timeline generation, milestone generation, invite token handling, member role safety, upload validation, and email token expiry.
 - Eternum rules modules for ability modifiers, mana, stamina, spell tiers, spell infusion, homebrew status, disciplines, necromancy branches, and professions.
 - OpenAI integration helpers and API routes for backstory and custom spell suggestions.
 - Open5e SRD integration helper for public D&D-compatible spell data.
@@ -62,6 +73,10 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Spellbook SRD import depends on Open5e availability at runtime.
 - Homebrew item power validation is basic rarity heuristic validation, not a full balance simulator yet.
 - Blob upload supports direct user-uploaded images, but AI image generation is still planned.
+- Session notes support markdown storage and mobile display, but there is no rich markdown editor or sanitizer yet.
+- Activity feed is persisted and displayed, but realtime delivery is still only an abstraction.
+- VTT data models and placeholder APIs exist, but map rendering, dynamic lighting, drag/drop tokens, and combat UI are intentionally not implemented.
+- Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
 
 ## Known Issues
 
@@ -76,15 +91,18 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Resend requires a verified sending domain for production email delivery.
 - If `RESEND_API_KEY` is missing, registration still creates the account but verification email sending reports the configuration issue.
 - Blob image upload requires `BLOB_READ_WRITE_TOKEN`; otherwise upload requests return a configuration error.
+- Resend verification support is preserved, but production delivery is temporarily optional because sending-domain setup is limited.
+- Legacy `SessionNote` remains in the schema for compatibility while new notes use `CampaignNote`.
+- Session/activity/VTT schema changes require another `npm run db:push` on development databases.
 
 ## Next Recommended Steps
 
 1. Run `npm run db:push` against the development database to apply the expanded schema.
-2. Add invite email delivery through Resend.
-3. Add verified-email gates for future Discord and subscription features when those integrations exist.
-4. Upgrade gameplay editors with richer domain-specific validation and edit-in-place flows.
-5. Add route-level tests for Resend error handling, invite acceptance, role editing, and Blob uploads.
-6. Add tests for auth validation, rules engine, approval flows, homebrew publishing, invite flow, and dice visibility filtering.
+2. Add realtime transport behind `eventBus` for activity, dice, and session updates.
+3. Add full VTT map renderer, token movement, encounter UI, and dynamic lighting later.
+4. Add invite email delivery after Resend production domain delivery is ready.
+5. Upgrade gameplay editors with richer domain-specific validation and edit-in-place flows.
+6. Add route-level database tests for session APIs, notes, activity creation, and VTT records.
 7. Add realtime roll updates and richer campaign activity logs.
 
 ## Setup
@@ -112,6 +130,8 @@ Open [http://localhost:3000](http://localhost:3000).
 - `BLOB_READ_WRITE_TOKEN`: Vercel Blob token for homebrew image uploads. Image URL fields work without upload support.
 
 `EMAIL_VERIFICATION_PROVIDER` and `EMAIL_VERIFICATION_API_KEY` have been deprecated in favor of Resend verification links.
+
+No new environment variables were added in this pass.
 
 ## Account Rules
 
@@ -145,6 +165,8 @@ Email:
 3. Set `RESEND_API_KEY`, `EMAIL_FROM`, and `NEXTAUTH_URL` in local and production environments.
 4. Register a test account and use the dashboard resend button if the first email fails.
 
+Production Resend delivery is temporarily optional while the sending domain is limited. Keep the verification support configured where possible, but do not block local gameplay testing on production email delivery.
+
 ## Blob Image Upload Setup
 
 1. Create or connect a Vercel Blob store.
@@ -175,6 +197,8 @@ npm run prisma:deploy
 ```
 
 Production should use a managed PostgreSQL database such as Neon, Supabase, Render, Railway, or Vercel Postgres.
+
+This pass adds `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapLayer`, `MapToken`, `CombatEncounter`, and `InitiativeEntry`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, or VTT placeholders locally.
 
 ## Deployment
 
@@ -237,6 +261,17 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Blob image upload endpoint and UI
 - [x] Uploaded image rendering on homebrew, approval, inventory, and library cards
 - [x] Validation utilities for email tokens, invites, role safety, and Blob uploads
+- [x] Campaign session schema and APIs
+- [x] Session create/start/end/archive controls
+- [x] Campaign activity log schema and feed
+- [x] Session/campaign/character note schema and UI
+- [x] Event bus abstraction for future realtime
+- [x] Campaign timeline UI
+- [x] Character milestone tracking and display
+- [x] VTT foundation schema for maps, layers, tokens, encounters, and initiative
+- [x] VTT placeholder API and campaign dashboard panel
+- [x] True campaign dashboard route
+- [x] Gameplay infrastructure tests
 - [x] Server-side dice roll foundation
 - [x] Dice roll UI and visibility filtering foundation
 - [x] DM reveal foundation for hidden rolls
@@ -252,11 +287,16 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Campaign invite email delivery
 - [ ] Rich spellbook and item detail editors
 - [ ] Advanced homebrew balance validation
+- [ ] Realtime transport behind event bus
+- [ ] Rich markdown editor and sanitization for notes
+- [ ] Route-level database tests for session/activity APIs
 
 ### Planned
 
 - [ ] Session notes editor
 - [ ] Discord integration
+- [ ] Full VTT map rendering
+- [ ] Dynamic lighting
 - [ ] Realtime dice/activity updates
 - [ ] Auth validation test suite
 - [ ] Homebrew workflow test suite
