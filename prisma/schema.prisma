@@ -1,0 +1,293 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GlobalRole {
+  PLAYER
+  DM
+}
+
+enum CampaignRole {
+  DM
+  PLAYER
+  ASSISTANT_DM
+  SPECTATOR
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum ApprovalStatus {
+  DRAFT
+  PENDING_DM_REVIEW
+  APPROVED_PRIVATE
+  APPROVED_PUBLIC
+  REJECTED
+  ARCHIVED
+}
+
+enum ContentVisibility {
+  CAMPAIGN_ONLY
+  PRIVATE_USER
+  PUBLIC_LIBRARY
+  OFFICIAL_ETERNUM
+}
+
+enum ContentType {
+  CUSTOM_SPELL
+  CUSTOM_ITEM
+  CRAFTING_RECIPE
+  MONSTER_NPC
+  PROFESSION_PERK
+  MAGICAL_DISCIPLINE
+}
+
+enum DiceVisibility {
+  DM_ONLY
+  ROLLER_AND_DM
+  PARTY_VISIBLE
+  PUBLIC
+}
+
+enum CastingAbility {
+  CHA
+  INT
+  WIS
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  globalRoles   GlobalRole[] @default([PLAYER])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts       Account[]
+  sessions       Session[]
+  memberships    CampaignMember[]
+  ownedCampaigns Campaign[] @relation("CampaignOwner")
+  characters     Character[]
+  invitesSent    CampaignInvite[] @relation("InviteSender")
+  homebrew       HomebrewContent[]
+  diceRolls      DiceRoll[]
+  approvals      ApprovalRequest[] @relation("ApprovalReviewer")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  ownerId     String
+  settings    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner      User              @relation("CampaignOwner", fields: [ownerId], references: [id])
+  members    CampaignMember[]
+  invites    CampaignInvite[]
+  characters Character[]
+  notes      SessionNote[]
+  homebrew   HomebrewContent[]
+  diceRolls  DiceRoll[]
+  approvals  ApprovalRequest[]
+}
+
+model CampaignMember {
+  id         String       @id @default(cuid())
+  campaignId String
+  userId     String
+  role       CampaignRole
+  createdAt  DateTime     @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+}
+
+model CampaignInvite {
+  id          String       @id @default(cuid())
+  campaignId  String
+  email       String
+  role        CampaignRole @default(PLAYER)
+  token       String       @unique
+  status      InviteStatus @default(PENDING)
+  invitedById String
+  expiresAt   DateTime
+  createdAt   DateTime     @default(now())
+
+  campaign  Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  invitedBy User     @relation("InviteSender", fields: [invitedById], references: [id])
+}
+
+model Character {
+  id             String          @id @default(cuid())
+  campaignId     String?
+  ownerId        String
+  name           String
+  ancestry       String?
+  className      String?
+  level          Int             @default(1)
+  castingAbility CastingAbility?
+  strength       Int             @default(10)
+  dexterity      Int             @default(10)
+  constitution   Int             @default(10)
+  intelligence   Int             @default(10)
+  wisdom         Int             @default(10)
+  charisma       Int             @default(10)
+  backstory      String?         @db.Text
+  approvedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  campaign         Campaign?            @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  owner            User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  professionLevels ProfessionProgress[]
+  backstoryAnalyses BackstoryAnalysis[]
+  diceRolls        DiceRoll[]
+}
+
+model ProfessionProgress {
+  id          String   @id @default(cuid())
+  characterId String
+  profession  String
+  level       Int      @default(0)
+  xp          Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, profession])
+}
+
+model BackstoryAnalysis {
+  id          String         @id @default(cuid())
+  characterId String
+  requestedBy String
+  suggestion  Json
+  status      ApprovalStatus @default(PENDING_DM_REVIEW)
+  dmNotes     String?        @db.Text
+  createdAt   DateTime       @default(now())
+  reviewedAt  DateTime?
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+model HomebrewContent {
+  id           String            @id @default(cuid())
+  type         ContentType
+  title        String
+  slug         String
+  summary      String?
+  body         Json
+  rulesResult  Json?
+  imagePrompt  String?
+  status       ApprovalStatus    @default(DRAFT)
+  visibility   ContentVisibility @default(PRIVATE_USER)
+  campaignId   String?
+  authorId     String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  publishedAt  DateTime?
+
+  campaign  Campaign?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  author    User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  approvals ApprovalRequest[]
+
+  @@unique([type, slug])
+}
+
+model ApprovalRequest {
+  id          String         @id @default(cuid())
+  campaignId  String
+  homebrewId  String?
+  reviewerId  String?
+  status      ApprovalStatus @default(PENDING_DM_REVIEW)
+  requestNote String?        @db.Text
+  reviewNote  String?        @db.Text
+  createdAt   DateTime       @default(now())
+  reviewedAt  DateTime?
+
+  campaign Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  homebrew HomebrewContent? @relation(fields: [homebrewId], references: [id], onDelete: Cascade)
+  reviewer User?            @relation("ApprovalReviewer", fields: [reviewerId], references: [id])
+}
+
+model SessionNote {
+  id         String   @id @default(cuid())
+  campaignId String
+  title      String
+  body       String   @db.Text
+  visibleToPlayers Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model DiceRoll {
+  id          String         @id @default(cuid())
+  campaignId  String
+  characterId String?
+  rollerId    String
+  expression  String
+  label       String?
+  visibility  DiceVisibility
+  total       Int
+  detail      Json
+  revealedAt  DateTime?
+  createdAt   DateTime       @default(now())
+
+  campaign  Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  character Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  roller    User       @relation(fields: [rollerId], references: [id], onDelete: Cascade)
+}
