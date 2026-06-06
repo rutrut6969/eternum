@@ -22,6 +22,15 @@ export async function getHeaderContext() {
     : null;
 
   const canAccessDmTools = account ? await subscriptionService.canAccessDmTools(account.id) : false;
+  const hasCampaignDmRole = account
+    ? await prisma.campaignMember.count({
+        where: {
+          userId: account.id,
+          campaign: { archivedAt: null },
+          roles: { hasSome: ["DM", "ASSISTANT_DM"] }
+        }
+      })
+    : 0;
   const notificationCount = account
     ? (account.emailVerified ? 0 : 1) +
       await prisma.approvalRequest.count({
@@ -42,6 +51,6 @@ export async function getHeaderContext() {
   return {
     account,
     notificationCount,
-    showDmTools: canAccessDmTools || account?.globalRoles.includes("DM") === true
+    showDmTools: canAccessDmTools || hasCampaignDmRole > 0 || account?.isFounder === true
   };
 }

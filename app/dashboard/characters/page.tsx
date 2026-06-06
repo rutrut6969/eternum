@@ -116,9 +116,9 @@ export default async function CharactersPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-7xl px-5 py-12">
+    <main className="mx-auto max-w-7xl px-4 py-7 sm:px-5 sm:py-10">
       <Badge tone="mana">Character Builder</Badge>
-      <h1 className="mt-5 text-4xl font-black text-white">Character workspace</h1>
+      <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl">Character workspace</h1>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">Create campaign-owned characters and manage their inventory, spells, professions, disciplines, traits, and AI backstory approvals.</p>
       <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {characters.length === 0 ? (
@@ -139,8 +139,8 @@ export default async function CharactersPage() {
           const hp = 10 + character.level * 6 + Math.floor((character.constitution - 10) / 2) * character.level;
           return (
             <Card key={character.id}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                   <h2 className="text-xl font-bold text-white">{character.name}</h2>
                   <p className="mt-1 text-xs text-zinc-500">{character.campaign?.name || "No campaign"} / {[character.ancestry, character.className].filter(Boolean).join(" / ") || "Unclassed"}</p>
                 </div>

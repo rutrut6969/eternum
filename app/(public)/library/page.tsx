@@ -71,9 +71,9 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
     .slice(0, 60);
 
   return (
-    <main className="mx-auto max-w-7xl px-5 py-12">
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-5 sm:py-12">
       <Badge tone="gold">Public Homebrew</Badge>
-      <h1 className="mt-5 text-4xl font-black text-white md:text-6xl">Library</h1>
+      <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl md:text-6xl">Library</h1>
       <p className="mt-5 max-w-3xl text-lg leading-8 text-zinc-300">
         Browse DM-approved public spells, items, recipes, monsters, profession perks, and disciplines from Eternum tables.
       </p>
@@ -94,7 +94,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
         <input className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="profession" defaultValue={profession ?? ""} placeholder="Profession requirement" />
         <input className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="creator" defaultValue={creator ?? ""} placeholder="Creator" />
         <input className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="campaign" defaultValue={campaign ?? ""} placeholder="Campaign source" />
-        <button className="rounded-md bg-aureate px-4 py-3 font-semibold text-void" type="submit">Search</button>
+        <button className="whitespace-nowrap rounded-md bg-aureate px-4 py-3 font-semibold text-void" type="submit">Search</button>
       </form>
 
       {libraryError ? (

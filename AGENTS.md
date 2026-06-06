@@ -1,0 +1,73 @@
+# AGENTS.md
+
+## Project Overview
+
+Eternum Tabletop is an AI-assisted D&D-compatible VTT and campaign manager using custom Eternum rules layered on top of SRD/Open5e-style data. It supports players, DMs, campaign management, character-owned gameplay data, mana/stamina rules, AI-assisted drafting, rules-engine validation, DM approval workflows, public homebrew, and a growing VTT map foundation.
+
+## Core Architecture Rule
+
+AI Suggestion -> Rules Engine Calculation -> DM Approval -> Saved Content
+
+AI can assist creativity, but the in-house rules engine owns final numbers, costs, tiers, balance warnings, and mechanical shape. Nothing AI-generated or homebrew becomes campaign-usable until a DM approves it.
+
+## Stack
+
+- Next.js App Router
+- React
+- TypeScript
+- TailwindCSS
+- Prisma
+- PostgreSQL
+- NextAuth
+- OpenAI API
+- Open5e / SRD integrations
+- Vercel
+- Vercel Blob
+
+## Development Rules
+
+- Keep the public marketing/rules site and logged-in app shell visually and structurally separate.
+- Mobile-first design is mandatory for every page, card, form, drawer, dashboard, and editor.
+- Never expose secrets and never commit `.env` files.
+- Never rely only on frontend authorization.
+- DM-only actions require server-side campaign membership checks.
+- Character-owned gameplay data must stay tied to `Character` records.
+- User account data must stay separate from character, campaign, and session gameplay data.
+- AI can suggest content, but the rules engine owns all mechanical numbers.
+- DM approval is required before AI or homebrew content becomes usable in a campaign.
+- Public library queries must only show approved public content.
+- Founder tier is the highest access tier and should pass all subscription gates.
+- Free users should not see DM tools unless they are DMs or Assistant DMs in a campaign.
+- Do not implement payment processing, Discord, full VTT combat, dynamic lighting, or AI image generation unless explicitly requested.
+
+## UI Rules
+
+- Avoid giant glow borders and neon-box styling.
+- Keep the dark fantasy / arcane-tech identity with restrained gold, violet, mana-blue, crimson, and stamina accents.
+- Use subtle borders, shadows, and accent lines.
+- Mobile headers must be compact, single-row, and readable.
+- Use a hamburger drawer on mobile with a solid dark panel, backdrop overlay, high z-index, safe-area padding, and vertical tap targets.
+- Respect `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)` where fixed or drawer UI touches screen edges.
+- Prevent horizontal overflow on all public and dashboard pages.
+- CTA buttons should not wrap awkwardly on 390px, 430px, or 768px widths.
+- Cards should scale down gracefully and avoid desktop-only multi-column assumptions.
+
+## Testing Rules
+
+- Run `npm run build` before completing a meaningful implementation pass.
+- Run tests when available with `npm test`.
+- Run Prisma generation or database sync commands when schema changes require them.
+- Update `README.md` after meaningful changes.
+- Commit meaningful milestones with clear messages.
+- Push after a successful commit when the remote is configured.
+
+## Current Priorities
+
+- Mobile UX polish
+- Dashboard discoverability
+- Session and gameplay loop
+- VTT map foundation
+- Activity feeds and timelines
+- Future Square subscriptions
+- Future Discord integration
+- Future AI map/image generation

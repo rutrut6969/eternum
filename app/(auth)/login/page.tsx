@@ -11,7 +11,7 @@ export default async function LoginPage() {
   if (session?.user?.id) redirect("/dashboard");
 
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-73px)] max-w-md items-center px-5 py-12">
+    <main className="mx-auto grid min-h-[calc(100dvh-56px)] max-w-md items-center px-4 py-8 sm:px-5 sm:py-12">
       <Card>
         <h1 className="text-3xl font-black text-white">Sign in</h1>
         <Suspense fallback={<p className="mt-6 text-sm text-zinc-300">Loading sign in...</p>}>

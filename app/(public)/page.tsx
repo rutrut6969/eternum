@@ -25,22 +25,22 @@ export default async function HomePage() {
 
   return (
     <main>
-      <section className="mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl items-center gap-10 px-5 py-14 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="max-w-3xl">
+      <section className="mx-auto grid min-h-[calc(100dvh-56px)] max-w-7xl items-center gap-8 px-4 py-8 sm:px-5 sm:py-12 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="max-w-3xl min-w-0">
           <div className="mb-5 flex flex-wrap gap-2">
             <Badge tone="mana">Mana rules</Badge>
             <Badge tone="violet">AI-assisted</Badge>
             <Badge tone="crimson">DM gated</Badge>
           </div>
-          <h1 className="text-balance text-5xl font-black tracking-normal text-white md:text-7xl">Eternum Tabletop</h1>
+          <h1 className="text-balance text-4xl font-black tracking-normal text-white sm:text-5xl md:text-7xl">Eternum Tabletop</h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
             A D&D-compatible campaign manager where arcane technology, custom professions, mana casting, stamina tactics, and public homebrew all pass through a rules-first approval flow.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/register" className="rounded-md bg-aureate px-5 py-3 font-semibold text-void hover:bg-ember">
+            <Link href="/register" className="whitespace-nowrap rounded-md bg-aureate px-5 py-3 font-semibold text-void hover:bg-ember">
               Create account
             </Link>
-            <Link href="/rules" className="rounded-md border border-white/15 px-5 py-3 font-semibold text-white hover:bg-white/5">
+            <Link href="/rules" className="whitespace-nowrap rounded-md border border-white/15 px-5 py-3 font-semibold text-white hover:bg-white/5">
               Read rules
             </Link>
           </div>
@@ -70,7 +70,7 @@ export default async function HomePage() {
         </Card>
       </section>
 
-      <section className="border-t border-white/10 bg-void/70 px-5 py-12">
+      <section className="border-t border-white/10 bg-void/70 px-4 py-8 sm:px-5 sm:py-12">
         <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-4">
           {pillars.map(([title, copy]) => (
             <Card key={title}>

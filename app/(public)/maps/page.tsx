@@ -68,9 +68,9 @@ export default async function PublicMapLibraryPage({ searchParams }: { searchPar
     .slice(0, 60);
 
   return (
-    <main className="mx-auto max-w-7xl px-5 py-12">
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-5 sm:py-12">
       <Badge tone="violet">Map Library</Badge>
-      <h1 className="mt-5 text-4xl font-black text-white md:text-6xl">Public battle maps</h1>
+      <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl md:text-6xl">Public battle maps</h1>
       <p className="mt-5 max-w-3xl text-lg leading-8 text-zinc-300">
         Browse approved VTT-ready maps. AI generation is planned as a top-down battle map workflow with Blob-stored images, prompt metadata, tags, and DM-controlled publication.
       </p>
@@ -87,7 +87,7 @@ export default async function PublicMapLibraryPage({ searchParams }: { searchPar
         </select>
         <input className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="size" defaultValue={size ?? ""} placeholder="Size, e.g. 30x30" />
         <input className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="creator" defaultValue={creator ?? ""} placeholder="Creator" />
-        <button className="rounded-md bg-aureate px-4 py-3 font-semibold text-void sm:col-span-2 lg:col-span-1" type="submit">Search maps</button>
+        <button className="whitespace-nowrap rounded-md bg-aureate px-4 py-3 font-semibold text-void sm:col-span-2 lg:col-span-1" type="submit">Search maps</button>
       </form>
 
       {libraryError ? (

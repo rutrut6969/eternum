@@ -6,10 +6,10 @@ import { tierManaCost } from "@/lib/rules/spells";
 
 export default function RulesPage() {
   return (
-    <main className="mx-auto max-w-7xl px-5 py-12">
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-5 sm:py-12">
       <div className="max-w-3xl">
         <Badge tone="violet">Rules Engine</Badge>
-        <h1 className="mt-5 text-4xl font-black text-white md:text-6xl">Eternum Custom Systems</h1>
+        <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl md:text-6xl">Eternum Custom Systems</h1>
         <p className="mt-5 text-lg leading-8 text-zinc-300">
           Eternum replaces spell slots and static backgrounds with mana, stamina, professions, disciplines, AI-assisted suggestions, and mandatory DM approval.
         </p>

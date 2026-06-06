@@ -16,16 +16,16 @@ const workspaceLinks = [
 
 export function WorkspaceNav() {
   return (
-      <nav className="hidden border-b border-white/10 bg-black/20 md:block">
-        <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 sm:px-5">
-          {workspaceLinks.map((item) => (
-            <Link
-              key={item.href}
-              className="shrink-0 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-300 transition hover:border-mana/25 hover:bg-white/5 hover:text-white"
-              href={item.href}
-            >
-              {item.label}
-            </Link>
+    <nav className="hidden border-b border-white/10 bg-[#090911]/85 backdrop-blur md:block">
+      <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 sm:px-5">
+        {workspaceLinks.map((item) => (
+          <Link
+            key={item.href}
+            className="shrink-0 whitespace-nowrap rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-300 transition hover:border-mana/25 hover:bg-white/5 hover:text-white"
+            href={item.href}
+          >
+            {item.label}
+          </Link>
         ))}
       </div>
     </nav>

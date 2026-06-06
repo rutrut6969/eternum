@@ -22,9 +22,9 @@ export default async function HomebrewWorkspacePage() {
   });
 
   return (
-    <main className="mx-auto max-w-7xl px-5 py-10">
+    <main className="mx-auto max-w-7xl px-4 py-7 sm:px-5 sm:py-10">
       <Badge tone="violet">Creator Tools</Badge>
-      <h1 className="mt-5 text-4xl font-black text-white">Homebrew workspace</h1>
+      <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl">Homebrew workspace</h1>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">Draft spells, items, recipes, creatures, NPCs, and future discipline perks before sending them through DM review.</p>
 
       <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

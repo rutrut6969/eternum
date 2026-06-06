@@ -24,25 +24,34 @@ export default async function DashboardMapsPage() {
   });
 
   return (
-    <main className="mx-auto max-w-7xl px-5 py-10">
+    <main className="mx-auto max-w-7xl px-4 py-7 sm:px-5 sm:py-10">
       <Badge tone="mana">VTT Foundation</Badge>
-      <h1 className="mt-5 text-4xl font-black text-white">Maps workspace</h1>
+      <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl">Maps workspace</h1>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">Manage uploaded and future AI-generated map records for campaigns and sessions. Full VTT rendering is still planned.</p>
 
       <section className="mt-8 grid gap-4 md:grid-cols-2">
         <Card>
           <h2 className="text-2xl font-bold text-white">Upload Map</h2>
           <p className="mt-3 text-sm leading-6 text-zinc-300">Map image attachment UI is planned on top of the existing Blob upload foundation. Use campaign VTT panels to create map records for now.</p>
-          <Link className="mt-5 inline-flex rounded-md border border-mana/30 px-4 py-3 text-sm font-semibold text-mana hover:bg-mana/10" href="/dashboard/campaigns">
+          <Link className="mt-5 inline-flex whitespace-nowrap rounded-md border border-mana/30 px-4 py-3 text-sm font-semibold text-mana hover:bg-mana/10" href="/dashboard/campaigns">
             Open campaigns
           </Link>
         </Card>
         <Card>
           <h2 className="text-2xl font-bold text-white">AI Map Generator Coming Soon</h2>
           <p className="mt-3 text-sm leading-6 text-zinc-300">Prompts will default to top-down, no-label, grid-aligned, high-contrast battle maps saved to Blob storage before DM approval/publication.</p>
-          <Link className="mt-5 inline-flex rounded-md border border-aureate/30 px-4 py-3 text-sm font-semibold text-aureate hover:bg-aureate/10" href="/maps">
+          <Link className="mt-5 inline-flex whitespace-nowrap rounded-md border border-aureate/30 px-4 py-3 text-sm font-semibold text-aureate hover:bg-aureate/10" href="/maps">
             Browse public maps
           </Link>
+        </Card>
+      </section>
+
+      <section className="mt-4">
+        <Card>
+          <h2 className="text-xl font-bold text-white">Future AI map flow</h2>
+          <p className="mt-3 text-sm leading-6 text-zinc-300">
+            Prompt - OpenAI image - Blob storage - map record - campaign/session use - optional public publication. Generation remains disabled until the image model and moderation flow are wired.
+          </p>
         </Card>
       </section>
 
@@ -64,6 +73,7 @@ export default async function DashboardMapsPage() {
               </div>
               {image ? <img className="mt-4 aspect-video w-full rounded-md object-cover" src={image.imageUrl} alt={image.imageAltText || map.name} /> : null}
               <h2 className="mt-5 text-xl font-bold text-white">{map.name}</h2>
+              {map.description ? <p className="mt-3 text-sm leading-6 text-zinc-300">{map.description}</p> : null}
               <p className="mt-2 text-sm text-zinc-400">{map.campaign?.name || map.visibility.replace(/_/g, " ")}{map.session ? ` / ${map.session.title}` : ""}</p>
               {map.tags.length ? <p className="mt-3 text-xs text-zinc-500">{map.tags.map((tag) => tag.label).join(" / ")}</p> : null}
             </Card>

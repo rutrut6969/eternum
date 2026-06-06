@@ -31,11 +31,11 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
   }
 
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-120px)] max-w-xl items-center px-5 py-12">
+    <main className="mx-auto grid min-h-[calc(100dvh-56px)] max-w-xl items-center px-4 py-8 sm:px-5 sm:py-12">
       <Card>
         <h1 className="text-3xl font-black text-white">{title}</h1>
         <p className="mt-4 text-zinc-300">{copy}</p>
-        <Link href="/dashboard" className="mt-6 inline-flex rounded-md bg-aureate px-4 py-3 font-semibold text-void">
+        <Link href="/dashboard" className="mt-6 inline-flex whitespace-nowrap rounded-md bg-aureate px-4 py-3 font-semibold text-void">
           Go to dashboard
         </Link>
       </Card>

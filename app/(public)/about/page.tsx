@@ -3,9 +3,9 @@ import { Card } from "@/components/ui/card";
 
 export default function AboutPage() {
   return (
-    <main className="mx-auto max-w-7xl px-5 py-12">
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-5 sm:py-12">
       <Badge tone="crimson">Vision</Badge>
-      <h1 className="mt-5 max-w-4xl text-4xl font-black text-white md:text-6xl">Creative freedom with mechanical trust.</h1>
+      <h1 className="mt-5 max-w-4xl text-3xl font-black text-white sm:text-4xl md:text-6xl">Creative freedom with mechanical trust.</h1>
       <div className="mt-8 grid gap-5 lg:grid-cols-3">
         {[
           ["For players", "Write a backstory, craft strange relics, bend spells through mana, and submit ideas without needing to be a balance designer."],

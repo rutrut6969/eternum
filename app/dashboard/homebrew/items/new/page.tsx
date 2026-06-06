@@ -18,9 +18,9 @@ export default async function NewItemPage() {
   });
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-10">
+    <main className="mx-auto max-w-5xl px-4 py-7 sm:px-5 sm:py-10">
       <Badge tone="gold">Item Builder</Badge>
-      <h1 className="mt-5 text-4xl font-black text-white">Custom item draft</h1>
+      <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl">Custom item draft</h1>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">Create manual or AI-assisted items with rarity, crafting requirements, attunement notes, balance notes, and image metadata.</p>
       <div className="mt-8 grid gap-5">
         <HomebrewDraftForm kind="CUSTOM_ITEM" campaigns={memberships.map((membership) => membership.campaign)} characters={characters} />

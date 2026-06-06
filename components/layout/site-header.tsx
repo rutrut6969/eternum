@@ -98,7 +98,7 @@ export function SiteHeader({ account, notificationCount, showDmTools, variant }:
           </span>
         </button>
 
-        <Link href={logoHref} className="text-center text-sm font-semibold uppercase tracking-[0.16em] text-aureate md:text-left md:tracking-[0.24em]">
+        <Link href={logoHref} className="min-w-0 flex-1 truncate text-center text-xs font-semibold uppercase tracking-[0.14em] text-aureate sm:text-sm md:flex-none md:text-left md:tracking-[0.24em]">
           Eternum Tabletop
         </Link>
 
@@ -116,8 +116,8 @@ export function SiteHeader({ account, notificationCount, showDmTools, variant }:
             />
           ) : (
             <>
-              <Link href="/login" className="rounded-md border border-aureate/25 px-3 py-2 text-aureate hover:bg-aureate/10">Sign in</Link>
-              <Link href="/register" className="rounded-md bg-aureate px-3 py-2 font-semibold text-void hover:bg-aureate/90">Create account</Link>
+              <Link href="/login" className="whitespace-nowrap rounded-md border border-aureate/25 px-3 py-2 text-aureate hover:bg-aureate/10">Sign in</Link>
+              <Link href="/register" className="whitespace-nowrap rounded-md bg-aureate px-3 py-2 font-semibold text-void hover:bg-aureate/90">Create account</Link>
             </>
           )}
         </div>
@@ -126,7 +126,7 @@ export function SiteHeader({ account, notificationCount, showDmTools, variant }:
           {account ? (
             <AccountMenu user={account} notificationCount={notificationCount} showAdminTools={showDmTools} compact />
           ) : (
-            <Link href="/login" className="rounded-md border border-aureate/25 px-2 py-2 text-xs text-aureate">Sign in</Link>
+            <Link href="/login" className="whitespace-nowrap rounded-md border border-aureate/25 px-2 py-2 text-xs text-aureate">Sign in</Link>
           )}
         </div>
       </nav>
@@ -158,7 +158,7 @@ export function SiteHeader({ account, notificationCount, showDmTools, variant }:
               {!account ? (
                 <>
                   <Link href="/login" className={drawerLinkClass("/login")} onClick={() => setDrawerOpen(false)}>Sign In</Link>
-                  <Link href="/register" className="rounded-md bg-aureate px-3 py-3 text-base font-semibold text-void shadow-md shadow-aureate/10" onClick={() => setDrawerOpen(false)}>Create Account</Link>
+                  <Link href="/register" className="whitespace-nowrap rounded-md bg-aureate px-3 py-3 text-base font-semibold text-void shadow-md shadow-aureate/10" onClick={() => setDrawerOpen(false)}>Create Account</Link>
                 </>
               ) : null}
             </div>

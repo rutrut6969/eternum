@@ -85,9 +85,13 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
   const maps = campaign.maps.map((map) => ({
     id: map.id,
     name: map.name,
+    description: map.description,
     width: map.width,
     height: map.height,
     gridType: map.gridType,
+    approvalStatus: map.approvalStatus,
+    visibility: map.visibility,
+    sessionTitle: campaign.campaignSessions.find((session) => session.id === map.sessionId)?.title ?? null,
     images: map.images,
     tags: map.tags,
     layers: map.layers,
@@ -96,17 +100,44 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
   }));
 
   return (
-    <main className="mx-auto max-w-7xl px-5 py-12">
+    <main className="mx-auto max-w-7xl px-4 py-7 sm:px-5 sm:py-10">
       <Link href="/dashboard/campaigns" className="text-sm text-mana">Back to campaigns</Link>
       <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
+        <div className="min-w-0">
           <Badge tone={isDm ? "gold" : "mana"}>{membership.roles.join(", ")}</Badge>
-          <h1 className="mt-4 text-4xl font-black text-white md:text-6xl">{campaign.name}</h1>
+          <h1 className="mt-4 text-3xl font-black text-white sm:text-4xl md:text-6xl">{campaign.name}</h1>
           {campaign.description ? <p className="mt-4 max-w-3xl text-lg leading-8 text-zinc-300">{campaign.description}</p> : null}
         </div>
       </div>
 
-      <section className="mt-8 grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
+      <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <Card className="lg:col-span-1">
+          <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">Members</p>
+          <p className="mt-2 text-3xl font-black text-white">{campaign.members.length}</p>
+        </Card>
+        <Card className="lg:col-span-1">
+          <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">Characters</p>
+          <p className="mt-2 text-3xl font-black text-white">{campaign.characters.length}</p>
+        </Card>
+        <Card className="lg:col-span-1">
+          <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">Approvals</p>
+          <p className="mt-2 text-3xl font-black text-aureate">{campaign.homebrew.length}</p>
+        </Card>
+        <Card className="lg:col-span-1">
+          <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">Sessions</p>
+          <p className="mt-2 text-3xl font-black text-mana">{campaign.campaignSessions.length}</p>
+        </Card>
+        <Card className="lg:col-span-1">
+          <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">Notes</p>
+          <p className="mt-2 text-3xl font-black text-violet">{campaign.campaignNotes.length}</p>
+        </Card>
+        <Card className="lg:col-span-1">
+          <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">Maps</p>
+          <p className="mt-2 text-3xl font-black text-stamina">{campaign.maps.length}</p>
+        </Card>
+      </section>
+
+      <section className="mt-6 grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
         <Card>
           <h2 className="text-2xl font-bold text-white">Active session</h2>
           {activeSession ? (
@@ -114,6 +145,10 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
               <Badge tone="stamina">Session #{activeSession.sessionNumber}</Badge>
               <h3 className="mt-3 text-xl font-bold text-white">{activeSession.title}</h3>
               <p className="mt-2 text-sm text-zinc-300">{activeSession.description || "No description yet."}</p>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-zinc-300">
+                <span className="rounded bg-black/25 p-2">Started {activeSession.startedAt ? activeSession.startedAt.toLocaleString() : "pending"}</span>
+                <span className="rounded bg-black/25 p-2">{campaign.maps.filter((map) => map.sessionId === activeSession.id).length} attached maps</span>
+              </div>
             </div>
           ) : (
             <p className="mt-4 text-sm text-zinc-300">No active session. A DM can start one from the session history.</p>
@@ -131,7 +166,10 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
               <div key={character.id} className="rounded-md border border-white/10 bg-black/25 p-3">
                 <h3 className="font-bold text-white">{character.name}</h3>
                 <p className="text-sm text-zinc-400">Player: {character.owner.name || character.owner.username}</p>
-                <p className="mt-2 text-xs text-zinc-500">{character.milestones.length} recent milestones</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Badge tone="mana">{character.milestones.length} milestones</Badge>
+                  {character.milestones[0] ? <span className="text-xs text-zinc-500">{character.milestones[0].title}</span> : null}
+                </div>
               </div>
             ))}
           </div>
@@ -165,7 +203,7 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
 
       <section className="mt-8 grid gap-5 xl:grid-cols-[1fr_0.8fr]">
         <TimelineView events={timeline.slice(0, 30)} />
-        <VttFoundationPanel campaignId={campaign.id} maps={maps} canManage={isDm} />
+        <VttFoundationPanel campaignId={campaign.id} maps={maps} sessions={sessions.map((session) => ({ id: session.id, title: session.title }))} canManage={isDm} />
       </section>
     </main>
   );

@@ -23,6 +23,10 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Mobile app shell now uses a compact top bar with hamburger drawer, centered Eternum logo, and avatar/account button. Full public nav links are hidden on mobile.
 - Logged-in mobile uses the app drawer instead of the public marketing nav. Logged-out mobile drawer shows public links, sign in, and create account.
 - Mobile bottom dashboard nav was removed to prevent browser-control overlap and content coverage.
+- Full repository audit pass rechecked app routes, components, core libraries, Prisma schema, README, package scripts, and gameplay tests before continuing integrations.
+- Global mobile/UI hardening now adds document-level horizontal overflow prevention, safe `100dvh` sizing, compact mobile page padding, non-wrapping CTAs, and phone-first headings across public, auth, invite, verify-email, and dashboard pages.
+- App shell role navigation now derives DM-tool visibility from actual active campaign DM/Assistant DM membership, founder/subscription access, or Founder status instead of relying on stale UI-only role state.
+- `AGENTS.md` now documents project architecture, development rules, mobile UI rules, authorization rules, testing expectations, and current priorities for future Codex passes.
 - Mobile hamburger drawer now renders as a solid dark fixed panel with blurred backdrop overlay, safe-area padding, scroll lock, high-contrast links, active-route styling, separated DM section, and bottom logout.
 - Public and authenticated routing is server-enforced: logged-in visits to `/`, `/login`, or `/register` redirect to `/dashboard`.
 - Route-group layouts now separate public/auth chrome from the authenticated dashboard app shell. Public pages use public navigation; `/dashboard` and `/dashboard/*` use the app shell.
@@ -73,7 +77,10 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Top-down battle map prompt template utility that enforces VTT-friendly perspective, no labels, grid alignment, clear terrain, and high contrast.
 - Character milestone tracking for profession levels, learned spells, crafted items, affinity gains, loot awards, and notable achievements.
 - True campaign dashboard at `/dashboard/campaigns/[campaignId]` with active session, recent activity, members, characters, notes, homebrew awaiting approval, session history, timeline, and VTT data placeholders.
-- Logged-in workspace redesign with session-aware top navigation, mobile bottom dashboard navigation, softer card styling, denser overview cards, quick actions, and discoverable routes.
+- Campaign dashboard polish adds compact mobile summary cards for members, characters, approvals, sessions, notes, and maps, plus active-session map counts and character milestone previews.
+- VTT campaign panel now displays map images, descriptions, tags, grid/status badges, AI-image badges, and lets DMs attach new map records to either the campaign or a specific session.
+- Maps workspace now documents the future Prompt -> OpenAI image -> Blob storage -> Map record -> Campaign/session use -> Optional public publish flow.
+- Logged-in workspace redesign with session-aware top navigation, mobile app drawer navigation, softer card styling, denser overview cards, quick actions, and discoverable routes.
 - Dashboard overview now shows active campaigns, characters, pending approvals, recent dice rolls, recent homebrew, public library shortcuts, invite acceptance, email verification notice, and quick create actions.
 - Dedicated workspace routes: `/dashboard/account`, `/dashboard/homebrew`, `/dashboard/homebrew/spells/new`, `/dashboard/homebrew/items/new`, and `/dashboard/maps`.
 - Campaign workspace now separates campaigns the user DMs, campaigns they play in, archived campaigns, join-invite actions, and richer campaign state cards.
@@ -111,6 +118,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Account settings display user data, but editable profile fields and linked account management are still placeholders.
 - DM-only mobile drawer links route to the current dashboard/campaign workspaces until dedicated per-tool landing pages exist.
 - `/invite/[token]` and `/verify-email` currently use the neutral root frame while public/auth/dashboard route groups have dedicated shells.
+- Manual visual QA should continue on real devices and browser widths after each UI pass; this pass added CSS/layout safeguards for 390px, 430px, and 768px widths but still relies on build/test validation unless a local browser session is running.
 
 ## Known Issues
 
@@ -308,6 +316,9 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Mobile drawer solid panel/backdrop readability fix
 - [x] Logged-in mobile app shell
 - [x] Removed mobile bottom nav overlap
+- [x] Global mobile overflow and safe-area hardening
+- [x] Full repository audit pass
+- [x] Root AGENTS.md project guidance
 - [x] Server-side redirect from `/`, `/login`, and `/register` for authenticated users
 - [x] Separate public/auth/app route-group layouts
 - [x] Public shell no longer wraps dashboard routes
@@ -361,9 +372,11 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Public map clone/import API foundation
 - [x] Top-down VTT map prompt templates
 - [x] True campaign dashboard route
+- [x] Campaign gameplay loop dashboard polish
+- [x] Maps foundation UI polish
 - [x] Logged-in workspace redesign
 - [x] Dashboard workspace navigation
-- [x] Mobile dashboard bottom nav
+- [x] Mobile app drawer navigation
 - [x] Dashboard overview quick actions and summary cards
 - [x] Account workspace route
 - [x] Founder badge UI on account/menu/dashboard

@@ -35,9 +35,9 @@ const plans = [
 
 export default function PricingPage() {
   return (
-    <main className="mx-auto max-w-7xl px-5 py-12">
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-5 sm:py-12">
       <Badge tone="gold">Billing Foundation</Badge>
-      <h1 className="mt-5 text-4xl font-black text-white md:text-6xl">Planned tiers</h1>
+      <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl md:text-6xl">Planned tiers</h1>
       <p className="mt-5 max-w-3xl text-lg leading-8 text-zinc-300">
         Eternum Tabletop is preparing a Square-powered subscription model. Payment processing, checkout, and webhooks are not implemented yet.
       </p>
@@ -70,7 +70,7 @@ export default function PricingPage() {
         <Card>
           <h2 className="text-2xl font-bold text-white">No payment buttons yet</h2>
           <p className="mt-3 text-sm leading-6 text-zinc-300">This page is informational only while the feature-gate and billing-event foundation settles.</p>
-          <Link className="mt-5 inline-flex rounded-md border border-mana/30 px-4 py-3 text-sm font-semibold text-mana hover:bg-mana/10" href="/register">
+          <Link className="mt-5 inline-flex whitespace-nowrap rounded-md border border-mana/30 px-4 py-3 text-sm font-semibold text-mana hover:bg-mana/10" href="/register">
             Create free account
           </Link>
         </Card>

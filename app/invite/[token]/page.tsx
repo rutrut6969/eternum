@@ -20,7 +20,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   const callbackUrl = `/invite/${encodeURIComponent(token)}`;
 
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-120px)] max-w-2xl items-center px-5 py-12">
+    <main className="mx-auto grid min-h-[calc(100dvh-56px)] max-w-2xl items-center px-4 py-8 sm:px-5 sm:py-12">
       <Card>
         <Badge tone={status === "active" ? "mana" : "crimson"}>{status}</Badge>
         <h1 className="mt-5 text-3xl font-black text-white">{invite?.campaign.name ?? "Invite unavailable"}</h1>
@@ -36,10 +36,10 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         {status === "active" && session?.user?.id ? <InviteLandingActions token={token} /> : null}
         {status === "active" && !session?.user?.id ? (
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <Link className="rounded-md bg-aureate px-4 py-3 text-center font-semibold text-void" href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}>
+            <Link className="whitespace-nowrap rounded-md bg-aureate px-4 py-3 text-center font-semibold text-void" href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}>
               Sign in to accept
             </Link>
-            <Link className="rounded-md border border-aureate/30 px-4 py-3 text-center font-semibold text-aureate" href={`/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}>
+            <Link className="whitespace-nowrap rounded-md border border-aureate/30 px-4 py-3 text-center font-semibold text-aureate" href={`/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}>
               Register to accept
             </Link>
           </div>
