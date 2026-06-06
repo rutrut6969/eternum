@@ -6,7 +6,7 @@ import { hasDmPermission } from "@/lib/campaign-auth";
 import { getOpenAIClient, openAIModel } from "@/lib/ai/openai";
 import { backstorySystemPrompt } from "@/lib/ai/prompts";
 import { prisma } from "@/lib/prisma";
-import { recordAIUsage } from "@/lib/subscriptions/service";
+import { recordAIUsage, subscriptionService } from "@/lib/subscriptions/service";
 
 const schema = z.object({
   characterId: z.string().cuid(),
@@ -20,6 +20,7 @@ export async function POST(request: Request) {
 
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Backstory must be between 100 and 8000 characters." }, { status: 400 });
+  if (!(await subscriptionService.canUseAdvancedAI(userId))) return NextResponse.json({ error: "Advanced AI requires a DM, Worldbuilder, or Founder plan." }, { status: 403 });
 
   const character = await prisma.character.findUnique({
     where: { id: parsed.data.characterId },

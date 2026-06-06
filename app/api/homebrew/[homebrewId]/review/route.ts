@@ -5,6 +5,7 @@ import { createActivity } from "@/lib/activity";
 import { getCurrentUserId } from "@/lib/auth/session";
 import { requireCampaignDm } from "@/lib/campaign-auth";
 import { prisma } from "@/lib/prisma";
+import { subscriptionService } from "@/lib/subscriptions/service";
 
 const schema = z.object({
   action: z.enum(["approve_private", "approve_public", "reject", "request_edits", "archive"]),
@@ -25,6 +26,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ho
   if (parsed.data.action === "approve_public") {
     const reviewer = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerified: true } });
     if (!reviewer?.emailVerified) return NextResponse.json({ error: "Verify your email before publishing public homebrew." }, { status: 403 });
+    if (!(await subscriptionService.canPublishPublicHomebrew(userId))) return NextResponse.json({ error: "Your current plan cannot publish public homebrew." }, { status: 403 });
   }
 
   const content = await prisma.homebrewContent.findUnique({ where: { id: homebrewId } });

@@ -12,7 +12,8 @@
     "prisma:migrate": "node ./node_modules/prisma/build/index.js migrate dev",
     "prisma:deploy": "node ./node_modules/prisma/build/index.js migrate deploy",
     "db:push": "node ./node_modules/prisma/build/index.js db push",
-    "db:studio": "node ./node_modules/prisma/build/index.js studio"
+    "db:studio": "node ./node_modules/prisma/build/index.js studio",
+    "seed:founders": "node scripts/seed-founders.mjs"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",

@@ -16,8 +16,7 @@ const workspaceLinks = [
 
 export function WorkspaceNav() {
   return (
-    <>
-      <nav className="border-b border-white/10 bg-black/20">
+      <nav className="hidden border-b border-white/10 bg-black/20 md:block">
         <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 sm:px-5">
           {workspaceLinks.map((item) => (
             <Link
@@ -27,16 +26,8 @@ export function WorkspaceNav() {
             >
               {item.label}
             </Link>
-          ))}
-        </div>
-      </nav>
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-white/10 bg-void/95 px-2 py-2 text-center text-xs text-zinc-300 backdrop-blur md:hidden">
-        {workspaceLinks.slice(0, 5).map((item) => (
-          <Link key={item.href} className="rounded-md px-1 py-2 hover:bg-white/5 hover:text-white" href={item.href}>
-            {item.label}
-          </Link>
         ))}
-      </nav>
-    </>
+      </div>
+    </nav>
   );
 }

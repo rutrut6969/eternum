@@ -1,12 +1,13 @@
 import type { SubscriptionPlanCode, SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-type FeatureKey = "campaigns" | "advancedAi" | "publicHomebrew" | "mapGeneration" | "discord";
+type FeatureKey = "dmTools" | "campaigns" | "advancedAi" | "publicHomebrew" | "mapGeneration" | "discord";
 
 const activeStatuses: SubscriptionStatus[] = ["ACTIVE", "TRIALING"];
 
 const planFeatures: Record<SubscriptionPlanCode, Record<FeatureKey, boolean>> = {
   FREE: {
+    dmTools: false,
     campaigns: true,
     advancedAi: false,
     publicHomebrew: true,
@@ -14,6 +15,7 @@ const planFeatures: Record<SubscriptionPlanCode, Record<FeatureKey, boolean>> = 
     discord: false
   },
   DM: {
+    dmTools: true,
     campaigns: true,
     advancedAi: true,
     publicHomebrew: true,
@@ -21,6 +23,7 @@ const planFeatures: Record<SubscriptionPlanCode, Record<FeatureKey, boolean>> = 
     discord: false
   },
   WORLDBUILDER: {
+    dmTools: true,
     campaigns: true,
     advancedAi: true,
     publicHomebrew: true,
@@ -28,6 +31,7 @@ const planFeatures: Record<SubscriptionPlanCode, Record<FeatureKey, boolean>> = 
     discord: true
   },
   FOUNDER: {
+    dmTools: true,
     campaigns: true,
     advancedAi: true,
     publicHomebrew: true,
@@ -37,6 +41,12 @@ const planFeatures: Record<SubscriptionPlanCode, Record<FeatureKey, boolean>> = 
 };
 
 async function getCurrentPlanCode(userId: string): Promise<SubscriptionPlanCode> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isFounder: true }
+  });
+  if (user?.isFounder) return "FOUNDER";
+
   const subscription = await prisma.userSubscription.findFirst({
     where: {
       userId,
@@ -57,6 +67,16 @@ async function canUse(userId: string, feature: FeatureKey) {
 
 export const subscriptionService = {
   getCurrentPlanCode,
+  async isFounder(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isFounder: true }
+    });
+    return Boolean(user?.isFounder);
+  },
+  canAccessDmTools(userId: string) {
+    return canUse(userId, "dmTools");
+  },
   canCreateCampaign(userId: string) {
     return canUse(userId, "campaigns");
   },

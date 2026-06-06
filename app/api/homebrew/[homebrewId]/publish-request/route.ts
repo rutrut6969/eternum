@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { subscriptionService } from "@/lib/subscriptions/service";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ homebrewId: string }> }) {
   const userId = await getCurrentUserId();
@@ -9,6 +10,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ ho
 
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerified: true } });
   if (!user?.emailVerified) return NextResponse.json({ error: "Verify your email before requesting public publishing." }, { status: 403 });
+  if (!(await subscriptionService.canPublishPublicHomebrew(userId))) return NextResponse.json({ error: "Your current plan cannot publish public homebrew." }, { status: 403 });
 
   const content = await prisma.homebrewContent.findUnique({ where: { id: homebrewId } });
   if (!content || content.authorId !== userId) return NextResponse.json({ error: "Homebrew not found." }, { status: 404 });

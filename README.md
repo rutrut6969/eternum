@@ -20,6 +20,9 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Email verification feature gates for campaign creation and public homebrew publishing.
 - Account email status UI with a resend verification button.
 - Authenticated navigation now hides Sign In/Create Account and shows a session-aware avatar/account menu with profile links, logout, and attention indicator.
+- Mobile app shell now uses a compact top bar with hamburger drawer, centered Eternum logo, and avatar/account button. Full public nav links are hidden on mobile.
+- Logged-in mobile uses the app drawer instead of the public marketing nav. Logged-out mobile drawer shows public links, sign in, and create account.
+- Mobile bottom dashboard nav was removed to prevent browser-control overlap and content coverage.
 - Protected dashboard routes using server-side session checks.
 - Campaign CRUD foundation: authenticated users can create campaigns, campaign creators receive DM and Player roles, DMs can edit name, description, JSON settings, and archive campaigns.
 - Campaign membership role arrays support DM, Player, Assistant DM, Spectator, and mixed-role users.
@@ -49,6 +52,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Pricing page foundation at `/pricing` with planned Free, DM, Worldbuilder, and Founder tiers. No payment buttons or checkout flows exist yet.
 - Subscription and billing schema foundation for `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, and `AIUsage`.
 - Subscription feature-gate service foundation with `canCreateCampaign()`, `canUseAdvancedAI()`, `canPublishPublicHomebrew()`, `canUseFutureMapGeneration()`, and `canUseFutureDiscordFeatures()`.
+- Founder/max-tier support with `isFounder`, `founderSince`, Founder badges, and a safe `npm run seed:founders` update script.
+- Server-side gates now include `canAccessDmTools()` and are wired into campaign creation, advanced AI routes, and public homebrew publishing.
 - Monthly AI usage tracking is wired into backstory, spell, and item AI routes after authorization checks.
 - Registration usernames can auto-generate from Display Name, stop auto-updating after manual edits, and reset from display name on demand.
 - Registration and username availability APIs now catch Prisma lookup/create errors and return friendly messages instead of crashing pages.
@@ -72,6 +77,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Character workspace now includes mobile-friendly character cards with campaign, level, HP placeholder, mana/stamina bars, spell count, and profession count before the full editor.
 - Homebrew workspace now groups authored content by draft, pending review, approved private, published public, and rejected/archived status lanes.
 - Account workspace displays display name, username, email verification status, subscription placeholder, AI usage counts, linked-account placeholder, and Obsidian Systems branding.
+- Account workspace, dashboard, and avatar menu show subtle Founder / Max Tier / Lifetime Access badges for founder accounts.
 - Footer branding now displays "Powered by Obsidian Systems LLC" across public and logged-in pages.
 - Vitest test setup with coverage for session transitions, timeline generation, milestone generation, invite token handling, member role safety, upload validation, and email token expiry.
 - Eternum rules modules for ability modifiers, mana, stamina, spell tiers, spell infusion, homebrew status, disciplines, necromancy branches, and professions.
@@ -100,6 +106,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Homebrew spell/item builder routes are usable entry points, but rich field-level spell/item editors and post-save image-upload handoff are still basic.
 - Dashboard navigation is functional and mobile-friendly, but active-route highlighting and richer notification detail views are still planned.
 - Account settings display user data, but editable profile fields and linked account management are still placeholders.
+- DM-only mobile drawer links route to the current dashboard/campaign workspaces until dedicated per-tool landing pages exist.
 
 ## Known Issues
 
@@ -120,16 +127,17 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Session/activity/VTT/map schema changes require `npm run db:push` on development databases.
 - Subscription/billing schema changes require `npm run db:push` on development databases.
 - Square integration is planned only; no checkout, webhooks, billing logic, or subscription enforcement should be expected yet.
+- `npm run seed:founders` is update-only and safe for passwords/data, but the live seed attempt in this pass could not reach the remote database from the Node script even after `npm run db:push` succeeded. Rerun it when the database is reachable.
 
 ## Next Recommended Steps
 
-1. Add Square checkout planning documents and webhook route stubs once billing requirements are finalized.
-2. Wire feature gates into specific routes only after plan limits and launch policy are agreed.
-3. Add active-route highlighting and richer notification detail views for the authenticated account menu.
-4. Wire the AI map generation service call and Blob save path behind the new map prompt/image models.
-5. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
-6. Add realtime transport behind `eventBus` for activity, dice, and session updates.
-7. Upgrade gameplay editors with richer domain-specific validation and edit-in-place flows.
+1. Rerun `npm run seed:founders` when the database is reachable to promote configured founder accounts.
+2. Add dedicated DM tools routes for approvals, sessions, hidden rolls, member management, and campaign settings.
+3. Add Square checkout planning documents and webhook route stubs once billing requirements are finalized.
+4. Add active-route highlighting and richer notification detail views for the authenticated account menu.
+5. Wire the AI map generation service call and Blob save path behind the new map prompt/image models.
+6. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
+7. Add realtime transport behind `eventBus` for activity, dice, and session updates.
 
 ## Setup
 
@@ -154,6 +162,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - `RESEND_API_KEY`: Required to send verification emails.
 - `EMAIL_FROM`: Sender address for Resend, for example `noreply@eternumtabletop.com`.
 - `BLOB_READ_WRITE_TOKEN`: Vercel Blob token for homebrew image uploads. Image URL fields work without upload support.
+- `FOUNDER_ACCOUNTS`: Optional comma-separated emails or usernames to promote with `npm run seed:founders`. If omitted, the local seed uses the configured founder username default.
 
 `EMAIL_VERIFICATION_PROVIDER` and `EMAIL_VERIFICATION_API_KEY` have been deprecated in favor of Resend verification links.
 
@@ -220,9 +229,12 @@ Production Resend delivery is temporarily optional while the sending domain is l
 - Planned tiers are `FREE`, `DM`, `WORLDBUILDER`, and `FOUNDER`.
 - `SubscriptionPlan` stores tier metadata, planned prices, sort order, and feature JSON.
 - `UserSubscription` stores the active user plan, status, start/expiry dates, `squareCustomerId`, and `squareSubscriptionId`.
+- `User` stores `isFounder` and `founderSince` so Founder access remains fast and provider-independent.
 - `BillingEvent` stores future provider events and webhook payloads. Provider defaults to `square`.
 - `AIUsage` stores monthly request counts by user and month.
 - `subscriptionService` centralizes feature-gate decisions for campaign creation, advanced AI, public homebrew publishing, future map generation, and future Discord features.
+- Founder accounts are treated as the highest tier and pass all current/future premium gates, including DM tools, advanced AI, public publishing, future map generation, and future Discord/VTT premium features.
+- Run `npm run seed:founders` to promote existing accounts. The script never changes passwords, never recreates existing accounts, skips missing accounts, masks email output, and marks founder accounts verified.
 - The current pass does not implement Square checkout, Square webhooks, billing logic, subscription enforcement, Stripe, or payment processing.
 
 ## Invite Links
@@ -249,7 +261,7 @@ npm run prisma:deploy
 
 Production should use a managed PostgreSQL database such as Neon, Supabase, Render, Railway, or Vercel Postgres.
 
-Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, and `AIUsage`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, AI usage tracking, or VTT placeholders locally.
+Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, `AIUsage`, `User.isFounder`, and `User.founderSince`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, founder access, AI usage tracking, or VTT placeholders locally.
 
 ## Deployment
 
@@ -288,6 +300,9 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Account email status and resend UI
 - [x] Session-aware authenticated account menu
 - [x] Logged-out Sign In/Create Account nav state
+- [x] Mobile hamburger drawer shell
+- [x] Logged-in mobile app shell
+- [x] Removed mobile bottom nav overlap
 - [x] Subtle global Obsidian Systems LLC footer branding
 - [x] Verification gates for campaign creation and public publishing
 - [x] Dashboard route protection
@@ -315,6 +330,9 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Pricing page foundation
 - [x] Subscription plan/user subscription/billing event schema foundation
 - [x] Subscription feature gate service foundation
+- [x] Founder/max-tier schema fields
+- [x] Founder seed/update script
+- [x] Server-side founder/subscription gates for DM tools, campaign creation, advanced AI, and public publishing
 - [x] AI usage tracking schema and route increments
 - [x] Display-name-to-username autofill and reset behavior
 - [x] Image storage metadata foundation
@@ -340,6 +358,7 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Mobile dashboard bottom nav
 - [x] Dashboard overview quick actions and summary cards
 - [x] Account workspace route
+- [x] Founder badge UI on account/menu/dashboard
 - [x] Homebrew workspace route
 - [x] Spell builder entry route
 - [x] Item builder entry route
@@ -372,6 +391,8 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Active route highlighting for workspace navigation
 - [ ] Editable account profile settings
 - [ ] Richer notification inbox/details
+- [ ] Dedicated DM tools landing pages
+- [ ] Rerun founder seed against reachable database
 
 ### Planned
 

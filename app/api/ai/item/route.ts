@@ -8,7 +8,7 @@ import { requireCampaignMember } from "@/lib/campaign-auth";
 import { slugForHomebrew } from "@/lib/homebrew";
 import { prisma } from "@/lib/prisma";
 import { validateItemPower } from "@/lib/rules/items";
-import { recordAIUsage } from "@/lib/subscriptions/service";
+import { recordAIUsage, subscriptionService } from "@/lib/subscriptions/service";
 
 const schema = z.object({
   idea: z.string().min(20).max(4000),
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
 
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid item idea." }, { status: 400 });
+  if (!(await subscriptionService.canUseAdvancedAI(userId))) return NextResponse.json({ error: "Advanced AI requires a DM, Worldbuilder, or Founder plan." }, { status: 403 });
 
   if (parsed.data.campaignId) {
     try {

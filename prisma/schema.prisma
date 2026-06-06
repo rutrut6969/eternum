@@ -162,6 +162,8 @@ model User {
   emailVerificationExpires DateTime?
   image         String?
   passwordHash  String?
+  isFounder     Boolean   @default(false)
+  founderSince  DateTime?
   globalRoles   GlobalRole[] @default([PLAYER])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <section className={clsx("rounded-lg border border-white/10 bg-charcoal/70 p-5 shadow-lg shadow-black/20 backdrop-blur", className)}>{children}</section>;
+  return <section className={clsx("rounded-lg border border-white/10 bg-charcoal/68 p-4 shadow-md shadow-black/15 backdrop-blur sm:p-5", className)}>{children}</section>;
 }

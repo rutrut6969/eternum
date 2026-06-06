@@ -8,6 +8,7 @@ import { ResourceBars } from "@/components/resource-bars";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { calculateMana, calculateStamina } from "@/lib/rules/resources";
+import { subscriptionService } from "@/lib/subscriptions/service";
 
 const quickActions = [
   { href: "/dashboard/campaigns", label: "Create campaign", tone: "gold" },
@@ -24,7 +25,7 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const account = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { email: true, emailVerified: true, name: true, username: true }
+    select: { email: true, emailVerified: true, name: true, username: true, isFounder: true, globalRoles: true }
   });
   const memberships = await prisma.campaignMember.findMany({
     where: { userId: user.id },
@@ -58,8 +59,16 @@ export default async function DashboardPage() {
     take: 5
   });
   const dmCampaignIds = activeMemberships.filter((membership) => membership.roles.includes("DM") || membership.roles.includes("ASSISTANT_DM")).map((membership) => membership.campaignId);
+  const canAccessDmTools = await subscriptionService.canAccessDmTools(user.id);
+  const showDmTools = canAccessDmTools || dmCampaignIds.length > 0 || account?.globalRoles.includes("DM") === true;
   const pendingApprovals = await prisma.approvalRequest.count({
     where: { campaignId: { in: dmCampaignIds }, status: "PENDING_DM_REVIEW" }
+  });
+  const recentActivity = await prisma.activityLog.findMany({
+    where: { campaignId: { in: activeMemberships.map((membership) => membership.campaignId) } },
+    include: { campaign: { select: { name: true } }, actor: { select: { name: true, username: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 5
   });
   const campaignOptions = activeMemberships.map((membership) => ({
     id: membership.campaign.id,
@@ -73,11 +82,11 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-7xl px-5 py-10">
+    <main className="mx-auto max-w-7xl px-4 py-7 sm:px-5 sm:py-10">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Badge tone="mana">Workspace</Badge>
-          <h1 className="mt-4 text-4xl font-black text-white md:text-6xl">Your Eternum table</h1>
+          <h1 className="mt-4 text-3xl font-black text-white md:text-6xl">Your Eternum table</h1>
           <p className="mt-3 max-w-3xl text-base leading-7 text-zinc-300">
             Campaigns, characters, dice, homebrew, maps, approvals, and account tools in one mobile-ready command surface.
           </p>
@@ -93,7 +102,21 @@ export default async function DashboardPage() {
         </section>
       ) : null}
 
-      <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {account?.isFounder ? (
+        <section className="mt-5">
+          <Card className="border-aureate/20 bg-aureate/5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Founder / Max Tier</h2>
+                <p className="mt-1 text-sm text-zinc-300">Lifetime access is active for this account.</p>
+              </div>
+              <Badge tone="gold">All gates unlocked</Badge>
+            </div>
+          </Card>
+        </section>
+      ) : null}
+
+      <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {quickActions.map((action) => (
           <Link key={action.label} href={action.href} className="rounded-lg border border-white/10 bg-black/25 p-4 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/5">
             <Badge tone={action.tone}>{action.label.split(" ")[0]}</Badge>
@@ -102,7 +125,7 @@ export default async function DashboardPage() {
         ))}
       </section>
 
-      <section className="mt-8 grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="mt-7 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-2xl font-bold text-white">Active campaigns</h2>
@@ -165,13 +188,19 @@ export default async function DashboardPage() {
         </Card>
       </section>
 
-      <section className="mt-8 grid gap-5 lg:grid-cols-3">
-        <Card>
-          <h2 className="text-xl font-bold text-white">Pending approvals</h2>
-          <p className="mt-3 text-3xl font-black text-aureate">{pendingApprovals}</p>
-          <p className="mt-2 text-sm text-zinc-400">DM actions waiting across your campaigns.</p>
-          <Link className="mt-4 inline-flex text-sm font-semibold text-mana" href="/dashboard/characters#approvals">Review queue</Link>
-        </Card>
+      <section className="mt-7 grid gap-4 lg:grid-cols-3">
+        {showDmTools ? (
+          <Card>
+            <h2 className="text-xl font-bold text-white">DM Tools</h2>
+            <p className="mt-3 text-3xl font-black text-aureate">{pendingApprovals}</p>
+            <p className="mt-2 text-sm text-zinc-400">Approvals, sessions, hidden rolls, member management, and campaign settings.</p>
+            <div className="mt-4 grid gap-2 text-sm">
+              <Link className="rounded-md border border-white/10 px-3 py-2 text-mana hover:bg-white/5" href="/dashboard/characters#approvals">Approvals</Link>
+              <Link className="rounded-md border border-white/10 px-3 py-2 text-mana hover:bg-white/5" href="/dashboard/campaigns">Campaign Management</Link>
+              <Link className="rounded-md border border-white/10 px-3 py-2 text-mana hover:bg-white/5" href="/dashboard#dice">Hidden Rolls</Link>
+            </div>
+          </Card>
+        ) : null}
         <Card>
           <h2 className="text-xl font-bold text-white">Recent homebrew</h2>
           <div className="mt-4 grid gap-2">
@@ -180,6 +209,18 @@ export default async function DashboardPage() {
               <p key={item.id} className="flex items-center justify-between gap-3 rounded bg-black/25 p-2 text-sm">
                 <span className="truncate text-zinc-200">{item.title}</span>
                 <span className="shrink-0 text-xs text-zinc-500">{item.status.replace(/_/g, " ")}</span>
+              </p>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <h2 className="text-xl font-bold text-white">Recent activity</h2>
+          <div className="mt-4 grid gap-2">
+            {recentActivity.length === 0 ? <p className="text-sm text-zinc-300">No campaign activity yet.</p> : null}
+            {recentActivity.map((activity) => (
+              <p key={activity.id} className="rounded bg-black/25 p-2 text-sm text-zinc-300">
+                <span className="block truncate text-white">{activity.type.replace(/_/g, " ")}</span>
+                <span className="text-xs text-zinc-500">{activity.campaign.name}</span>
               </p>
             ))}
           </div>
@@ -194,7 +235,7 @@ export default async function DashboardPage() {
         </Card>
       </section>
 
-      <section className="mt-8 grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
+      <section className="mt-7 grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
         <Card>
           <h2 className="text-2xl font-bold text-white">Accept invite</h2>
           <p className="mt-2 text-sm text-zinc-400">Paste a campaign token from your DM.</p>

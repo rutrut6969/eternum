@@ -9,9 +9,11 @@ type AccountMenuProps = {
     name: string | null;
     username: string;
     image: string | null;
+    isFounder?: boolean;
   };
   notificationCount: number;
   showAdminTools?: boolean;
+  compact?: boolean;
 };
 
 const menuItems = [
@@ -30,24 +32,26 @@ function initials(name: string | null, username: string) {
   return (parts[0]?.[0] ?? "E").concat(parts[1]?.[0] ?? "").toUpperCase();
 }
 
-export function AccountMenu({ user, notificationCount, showAdminTools = false }: AccountMenuProps) {
+export function AccountMenu({ user, notificationCount, showAdminTools = false, compact = false }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const label = user.name || user.username;
 
   return (
     <div className="relative flex items-center justify-center gap-2">
-      <Link
-        aria-label="Open account"
+      <button
+        aria-label="Open account menu"
         className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-white/15 bg-black/35 text-sm font-bold text-aureate transition hover:border-aureate/40"
-        href="/dashboard/account"
+        type="button"
+        onClick={() => setOpen((value) => !value)}
       >
         {user.image ? <img alt="" className="h-full w-full object-cover" src={user.image} /> : initials(user.name, user.username)}
         {notificationCount > 0 ? <span className="absolute right-0 top-0 h-3 w-3 rounded-full border border-void bg-crimson" /> : null}
-      </Link>
+      </button>
       <button
         className="rounded-md border border-white/10 bg-black/25 px-3 py-2 text-left text-sm text-zinc-200 transition hover:border-white/20 hover:bg-white/5"
         type="button"
         onClick={() => setOpen((value) => !value)}
+        hidden={compact}
       >
         <span className="block max-w-28 truncate font-semibold text-white">{label}</span>
         <span className="block max-w-28 truncate text-xs text-zinc-500">@{user.username}</span>
@@ -57,6 +61,7 @@ export function AccountMenu({ user, notificationCount, showAdminTools = false }:
           <div className="border-b border-white/10 px-3 py-3">
             <p className="font-semibold text-white">{label}</p>
             <p className="text-xs text-zinc-500">@{user.username}</p>
+            {user.isFounder ? <p className="mt-2 inline-flex rounded-full border border-aureate/25 bg-aureate/10 px-2 py-1 text-xs text-aureate">Founder / Max Tier</p> : null}
             {notificationCount > 0 ? <p className="mt-2 text-xs text-crimson">{notificationCount} item{notificationCount === 1 ? "" : "s"} need attention</p> : null}
           </div>
           <div className="py-2">

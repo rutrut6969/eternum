@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getCurrentUserId } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { withRandomSuffix } from "@/lib/slug";
+import { subscriptionService } from "@/lib/subscriptions/service";
 
 const createSchema = z.object({
   name: z.string().min(3).max(120),
@@ -35,6 +36,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await subscriptionService.canCreateCampaign(userId))) return NextResponse.json({ error: "Your current plan cannot create campaigns." }, { status: 403 });
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerified: true } });
   if (!user?.emailVerified) return NextResponse.json({ error: "Verify your email before creating campaigns." }, { status: 403 });
 
