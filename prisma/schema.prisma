@@ -32,6 +32,7 @@ enum ApprovalStatus {
   APPROVED_PRIVATE
   APPROVED_PUBLIC
   REJECTED
+  NEEDS_CHANGES
   ARCHIVED
 }
 
@@ -128,6 +129,7 @@ model Campaign {
   description String?
   ownerId     String
   settings    Json     @default("{}")
+  archivedAt  DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -145,7 +147,7 @@ model CampaignMember {
   id         String       @id @default(cuid())
   campaignId String
   userId     String
-  role       CampaignRole
+  roles      CampaignRole[] @default([PLAYER])
   createdAt  DateTime     @default(now())
 
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
@@ -158,7 +160,7 @@ model CampaignInvite {
   id          String       @id @default(cuid())
   campaignId  String
   email       String
-  role        CampaignRole @default(PLAYER)
+  roles       CampaignRole[] @default([PLAYER])
   token       String       @unique
   status      InviteStatus @default(PENDING)
   invitedById String
@@ -185,6 +187,16 @@ model Character {
   wisdom         Int             @default(10)
   charisma       Int             @default(10)
   backstory      String?         @db.Text
+  inventory      Json            @default("[]")
+  learnedSpells  Json            @default("[]")
+  customSpells   Json            @default("[]")
+  craftedItems   Json            @default("[]")
+  disciplines    Json            @default("[]")
+  traits         Json            @default("[]")
+  flaws          Json            @default("[]")
+  affinities     Json            @default("[]")
+  tamedCreatures Json            @default("[]")
+  undeadServants Json            @default("[]")
   approvedAt     DateTime?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt

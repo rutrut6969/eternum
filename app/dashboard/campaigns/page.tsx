@@ -1,18 +1,47 @@
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { CampaignManager } from "@/components/campaigns/campaign-manager";
+import { requireUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
 
-export default function CampaignsPage() {
+export default async function CampaignsPage() {
+  const user = await requireUser();
+  const campaigns = await prisma.campaign.findMany({
+    where: { members: { some: { userId: user.id } }, archivedAt: null },
+    include: {
+      members: { include: { user: { select: { id: true, name: true, email: true } } } },
+      invites: { where: { status: "PENDING" }, orderBy: { createdAt: "desc" } },
+      characters: { where: { ownerId: user.id }, select: { id: true, name: true } },
+      _count: { select: { diceRolls: true, approvals: true } }
+    },
+    orderBy: { updatedAt: "desc" }
+  });
+  const summaries = campaigns.map((campaign) => ({
+    id: campaign.id,
+    name: campaign.name,
+    description: campaign.description,
+    settings: campaign.settings,
+    members: campaign.members.map((member) => ({
+      id: member.id,
+      roles: member.roles,
+      user: { name: member.user.name, email: member.user.email }
+    })),
+    invites: campaign.invites.map((invite) => ({
+      id: invite.id,
+      email: invite.email,
+      token: invite.token,
+      roles: invite.roles,
+      status: invite.status
+    })),
+    characters: campaign.characters,
+    counts: { rolls: campaign._count.diceRolls, approvals: campaign._count.approvals }
+  }));
+
   return (
     <main className="mx-auto max-w-7xl px-5 py-12">
       <Badge tone="gold">DM Tools</Badge>
       <h1 className="mt-5 text-4xl font-black text-white">Campaigns</h1>
-      <div className="mt-8 grid gap-5 lg:grid-cols-3">
-        {["Invites", "Session Notes", "Settings"].map((title) => (
-          <Card key={title}>
-            <h2 className="text-2xl font-bold text-white">{title}</h2>
-            <p className="mt-3 text-sm leading-6 text-zinc-300">Data model and dashboard shell are ready for the next implementation pass.</p>
-          </Card>
-        ))}
+      <div className="mt-8">
+        <CampaignManager campaigns={summaries} />
       </div>
     </main>
   );

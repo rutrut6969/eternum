@@ -20,18 +20,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen font-sans antialiased">
         <div className="arcane-grid min-h-screen">
-          <header className="sticky top-0 z-40 border-b border-aureate/10 bg-void/85 backdrop-blur">
-            <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-              <Link href="/" className="text-sm font-semibold uppercase tracking-[0.24em] text-aureate">
+          <header className="sticky top-0 z-40 border-b border-aureate/10 bg-void/90 backdrop-blur">
+            <nav className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-5 md:flex-row md:items-center md:justify-between">
+              <Link href="/" className="text-center text-sm font-semibold uppercase tracking-[0.18em] text-aureate md:text-left md:tracking-[0.24em]">
                 Eternum Tabletop
               </Link>
-              <div className="flex flex-wrap items-center justify-end gap-2 text-sm text-zinc-300">
+              <div className="grid grid-cols-3 gap-2 text-center text-sm text-zinc-300 sm:flex sm:flex-wrap sm:items-center sm:justify-center md:justify-end">
                 {nav.slice(1).map((item) => (
-                  <Link key={item.href} href={item.href} className="rounded-md px-3 py-2 hover:bg-white/5 hover:text-white">
+                  <Link key={item.href} href={item.href} className="rounded-md px-2 py-2 hover:bg-white/5 hover:text-white sm:px-3">
                     {item.label}
                   </Link>
                 ))}
-                <Link href="/login" className="rounded-md border border-aureate/30 px-3 py-2 text-aureate hover:bg-aureate/10">
+                <Link href="/login" className="rounded-md border border-aureate/30 px-2 py-2 text-aureate hover:bg-aureate/10 sm:px-3">
                   Sign in
                 </Link>
               </div>
