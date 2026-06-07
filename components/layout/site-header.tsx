@@ -36,6 +36,7 @@ const appLinks = [
   { href: "/dashboard/homebrew/spells/new", label: "Spells" },
   { href: "/dashboard/homebrew/items/new", label: "Items" },
   { href: "/dashboard/maps", label: "Maps" },
+  { href: "/dashboard/assistant", label: "Assistant" },
   { href: "/dashboard#dice", label: "Dice" },
   { href: "/library", label: "Library" },
   { href: "/dashboard/account", label: "Account" },

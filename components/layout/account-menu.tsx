@@ -22,6 +22,7 @@ const menuItems = [
   { href: "/dashboard/campaigns", label: "Campaigns" },
   { href: "/dashboard/homebrew", label: "Homebrew" },
   { href: "/dashboard/maps", label: "Maps" },
+  { href: "/dashboard/assistant", label: "Assistant" },
   { href: "/dashboard/account", label: "Settings" },
   { href: "/pricing", label: "Subscription" }
 ];

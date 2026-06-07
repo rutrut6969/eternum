@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createEmailVerificationToken, isVerificationTokenExpired } from "@/lib/auth/email-verification";
 import { usernameFromDisplayName, validateUsername } from "@/lib/auth/validation";
+import { assistantSystemPrompt, classifyAssistantIntent } from "@/lib/assistant/intents";
 import { getInviteStatus } from "@/lib/invites";
 import { blueprintToMapLayers, createBlankMapBlueprint, validateMapBlueprint } from "@/lib/maps/blueprint-schema";
 import { buildEditableMapBlueprintPrompt, buildTopDownBattleMapPrompt } from "@/lib/maps/prompt-templates";
@@ -151,5 +152,22 @@ describe("editable map blueprints", () => {
 
     expect(layers[0].data.elements).toEqual([]);
     expect(editorState).toMatchObject({ selectedTool: "select", showGrid: true });
+  });
+});
+
+describe("unified assistant routing", () => {
+  it("classifies common creator intents", () => {
+    expect(classifyAssistantIntent("Help me make a shadow spell").type).toBe("SPELL_DRAFT");
+    expect(classifyAssistantIntent("Create an NPC merchant with secrets").type).toBe("NPC_DRAFT");
+    expect(classifyAssistantIntent("Build a ruined crypt map").type).toBe("MAP_BLUEPRINT");
+    expect(classifyAssistantIntent("Explain stamina recovery").type).toBe("RULE_EXPLANATION");
+  });
+
+  it("keeps assistant prompts suggestion-only", () => {
+    const prompt = assistantSystemPrompt(classifyAssistantIntent("make a monster"));
+
+    expect(prompt).toContain("Rules Engine Calculation");
+    expect(prompt).toContain("AI never finalizes mechanics");
+    expect(prompt).toContain("strict JSON");
   });
 });

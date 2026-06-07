@@ -101,6 +101,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Vitest test setup with coverage for session transitions, timeline generation, milestone generation, invite token handling, member role safety, upload validation, and email token expiry.
 - Eternum rules modules for ability modifiers, mana, stamina, spell tiers, spell infusion, homebrew status, disciplines, necromancy branches, and professions.
 - OpenAI integration helpers and API routes for backstory and custom spell suggestions.
+- Unified assistant foundation with persistent dashboard launcher, assistant workspace, thread/message/workflow models, intent routing, stored structured payloads, and workflow status updates.
+- Assistant routing currently recognizes character help, spell drafts, item drafts, NPC drafts, monster drafts, quest drafts, rule explanations, compendium help, and map blueprint requests.
 - Open5e SRD integration helper for public D&D-compatible spell data.
 - Vercel-ready project scripts and environment variable template.
 
@@ -123,6 +125,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
 - Subscription models, feature gates, pricing page, and AI usage tracking exist, but Square checkout, webhooks, billing portal, invoices, and plan enforcement are intentionally not implemented.
 - Homebrew spell/item builder routes are usable entry points, but rich field-level spell/item editors and post-save image-upload handoff are still basic.
+- Unified assistant stores structured drafts and workflow state, but it does not yet convert assistant workflows directly into saved homebrew, characters, NPCs, monsters, quests, or DM review submissions.
 - Dashboard navigation is functional and mobile-friendly, but active-route highlighting and richer notification detail views are still planned.
 - Account settings display user data, but editable profile fields and linked account management are still placeholders.
 - DM-only mobile drawer links route to the current dashboard/campaign workspaces until dedicated per-tool landing pages exist.
@@ -153,6 +156,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - `npm run seed:founders` is update-only and safe for passwords/data, but the live seed attempt in this pass could not reach the remote database from the Node script even after `npm run db:push` succeeded. Rerun it when the database is reachable.
 - The v1 map editor renders structured SVG elements and can add/erase basic element types, but precision drag handles, keyboard shortcuts, image export, fog, lighting, player view, and token automation are future phases.
 - AI map blueprints require `OPENAI_API_KEY` and a plan that passes `canUseFutureMapGeneration()`.
+- Unified assistant messages require `OPENAI_API_KEY` and currently use the existing advanced AI feature gate.
+- Assistant workflows are persisted as drafts, but submit-to-review/save-to-content actions are still future implementation work.
 
 ## Next Recommended Steps
 
@@ -164,6 +169,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 6. Add richer map editor interactions: drag handles, snap controls, layer reordering, labels editing, and image export.
 7. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
 8. Add optional AI image generation as a visual/reference layer after blueprint editing is stable.
+9. Add assistant workflow actions that convert structured drafts into spell/item/NPC/monster/map records and submit them to DM review.
+10. Add assistant campaign memory retrieval for session summaries, NPCs, quests, loot, decisions, and character milestones.
 
 ## Setup
 
@@ -182,7 +189,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - `DATABASE_URL`: PostgreSQL connection string.
 - `NEXTAUTH_URL`: Local or deployed app URL.
 - `NEXTAUTH_SECRET`: Long random secret for NextAuth.
-- `OPENAI_API_KEY`: Enables AI-assisted backstory, spell, and item workflows.
+- `OPENAI_API_KEY`: Enables AI-assisted backstory, spell, item, unified assistant, and AI map blueprint workflows.
 - `OPENAI_MODEL`: Defaults to `gpt-4o-mini`.
 - `OPEN5E_BASE_URL`: Defaults to `https://api.open5e.com/v1`.
 - `RESEND_API_KEY`: Required to send verification emails.
@@ -295,7 +302,7 @@ npm run prisma:deploy
 
 Production should use a managed PostgreSQL database such as Neon, Supabase, Render, Railway, or Vercel Postgres.
 
-Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, `AIUsage`, `User.isFounder`, `User.founderSince`, `Map.sourceType`, `Map.blueprintVersion`, and `Map.editorState`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, founder access, AI usage tracking, or editable map builder features locally.
+Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, `AIUsage`, `User.isFounder`, `User.founderSince`, `Map.sourceType`, `Map.blueprintVersion`, `Map.editorState`, `AssistantThread`, `AssistantMessage`, and `AssistantWorkflow`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, founder access, AI usage tracking, editable map builder features, or unified assistant features locally.
 
 ## Deployment
 
@@ -401,6 +408,10 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] AI map blueprint route
 - [x] Map blueprint validation and layer conversion utilities
 - [x] Structured SVG map renderer foundation
+- [x] Unified assistant schema for threads, messages, and workflows
+- [x] Persistent dashboard assistant launcher
+- [x] Assistant workspace route
+- [x] Assistant intent routing and workflow draft persistence
 - [x] True campaign dashboard route
 - [x] Campaign gameplay loop dashboard polish
 - [x] Maps foundation UI polish
@@ -436,6 +447,9 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Realtime transport behind event bus
 - [ ] Rich markdown editor and sanitization for notes
 - [ ] Route-level database tests for session/activity APIs
+- [ ] Assistant workflow conversion into saved homebrew/character/map records
+- [ ] Assistant submit-to-DM-review controls
+- [ ] Assistant campaign memory retrieval
 - [ ] Rich map editor drag handles, snap controls, and layer reordering
 - [ ] AI map image generation and Blob save pipeline
 - [ ] Campaign UI for public map clone/import

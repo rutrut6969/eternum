@@ -43,6 +43,8 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Structured editable map data is preferred over flat map images. Rooms, corridors, terrain, notes, spawn points, and secrets should remain editable through `MapLayer.data`.
 - AI map generation should produce validated map blueprints before any data is saved. AI image generation is separate and should not replace editable blueprint data.
 - Hybrid map workflows are expected: AI drafts structure, the DM edits manually, uploaded images can act as reference/base visuals, and publication still follows approval rules.
+- The unified assistant is a routing and drafting layer. It can store threads, messages, and workflow drafts, but it must not directly make content campaign-usable.
+- Assistant-created spells, items, NPCs, monsters, maps, quests, compendiums, and rules suggestions must still flow through validation, rules-engine calculation where relevant, and DM approval.
 
 ## UI Rules
 
@@ -72,6 +74,7 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Session and gameplay loop
 - VTT map foundation
 - Editable map builder and AI blueprint workflow
+- Unified assistant workflow foundation
 - Activity feeds and timelines
 - Future Square subscriptions
 - Future Discord integration
