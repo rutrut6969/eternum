@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createEmailVerificationToken, isVerificationTokenExpired } from "@/lib/auth/email-verification";
 import { usernameFromDisplayName, validateUsername } from "@/lib/auth/validation";
 import { getInviteStatus } from "@/lib/invites";
-import { buildTopDownBattleMapPrompt } from "@/lib/maps/prompt-templates";
+import { blueprintToMapLayers, createBlankMapBlueprint, validateMapBlueprint } from "@/lib/maps/blueprint-schema";
+import { buildEditableMapBlueprintPrompt, buildTopDownBattleMapPrompt } from "@/lib/maps/prompt-templates";
 import { wouldRemoveFinalDm } from "@/lib/member-roles";
 import { milestoneForGameplayChange, professionMilestone } from "@/lib/milestones";
 import { transitionSessionStatus } from "@/lib/sessions";
@@ -100,5 +101,55 @@ describe("AI map prompt templates", () => {
     expect(prompt).toContain("top-down");
     expect(prompt).toContain("Do not include text labels");
     expect(prompt).toContain("grid-friendly");
+  });
+
+  it("enforces editable blueprint output before image generation", () => {
+    const prompt = buildEditableMapBlueprintPrompt({ prompt: "ruined goblin crypt with five rooms", width: 30, height: 30 });
+
+    expect(prompt).toContain("strict JSON only");
+    expect(prompt).toContain("Do not create an image");
+    expect(prompt).toContain("Allowed MapElement types");
+    expect(prompt).toContain("square 30 by 30");
+  });
+});
+
+describe("editable map blueprints", () => {
+  it("validates blank manual blueprints and converts them to layer data", () => {
+    const blueprint = createBlankMapBlueprint({ name: "Training Hall", width: 24, height: 18 });
+    const validation = validateMapBlueprint(blueprint);
+
+    expect(validation.valid).toBe(true);
+    if (validation.valid) {
+      const layers = blueprintToMapLayers(validation.blueprint);
+      expect(layers[0]).toMatchObject({ name: "Base", data: { elements: [] } });
+    }
+  });
+
+  it("rejects elements outside the grid", () => {
+    const validation = validateMapBlueprint({
+      version: 1,
+      name: "Broken Map",
+      grid: { type: "square", width: 10, height: 10 },
+      layers: [
+        {
+          name: "Base",
+          order: 0,
+          visible: true,
+          locked: false,
+          elements: [{ id: "room_1", type: "room", bounds: { x: 8, y: 8, width: 5, height: 5 }, visibility: "DM_ONLY", metadata: {} }]
+        }
+      ]
+    });
+
+    expect(validation.valid).toBe(false);
+  });
+
+  it("keeps clone-ready editor metadata separate from layer geometry", () => {
+    const blueprint = createBlankMapBlueprint({ name: "Clone Source" });
+    const layers = blueprintToMapLayers(blueprint);
+    const editorState = { zoom: 1, pan: { x: 0, y: 0 }, selectedTool: "select", showGrid: true };
+
+    expect(layers[0].data.elements).toEqual([]);
+    expect(editorState).toMatchObject({ selectedTool: "select", showGrid: true });
   });
 });

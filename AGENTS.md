@@ -39,6 +39,10 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Founder tier is the highest access tier and should pass all subscription gates.
 - Free users should not see DM tools unless they are DMs or Assistant DMs in a campaign.
 - Do not implement payment processing, Discord, full VTT combat, dynamic lighting, or AI image generation unless explicitly requested.
+- The map builder may be inspired by the broad category of sketch-style tabletop map editors, but must not copy Dungeon Scrawl code, branding, UI, interaction design, or assets.
+- Structured editable map data is preferred over flat map images. Rooms, corridors, terrain, notes, spawn points, and secrets should remain editable through `MapLayer.data`.
+- AI map generation should produce validated map blueprints before any data is saved. AI image generation is separate and should not replace editable blueprint data.
+- Hybrid map workflows are expected: AI drafts structure, the DM edits manually, uploaded images can act as reference/base visuals, and publication still follows approval rules.
 
 ## UI Rules
 
@@ -67,6 +71,7 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Dashboard discoverability
 - Session and gameplay loop
 - VTT map foundation
+- Editable map builder and AI blueprint workflow
 - Activity feeds and timelines
 - Future Square subscriptions
 - Future Discord integration

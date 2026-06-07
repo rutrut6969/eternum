@@ -56,8 +56,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cam
       gridWidth: parsed.data.width,
       gridHeight: parsed.data.height,
       gridType: parsed.data.gridType,
+      editorState: { zoom: 1, pan: { x: 0, y: 0 }, selectedTool: "select", showGrid: true },
       createdById: userId,
-      layers: { create: [{ name: "Base", order: 0 }] }
+      layers: { create: [{ name: "Base", order: 0, data: { elements: [] } }] }
     },
     include: { layers: true, tokens: true }
   });

@@ -84,7 +84,11 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - True campaign dashboard at `/dashboard/campaigns/[campaignId]` with active session, recent activity, members, characters, notes, homebrew awaiting approval, session history, timeline, and VTT data placeholders.
 - Campaign dashboard polish adds compact mobile summary cards for members, characters, approvals, sessions, notes, and maps, plus active-session map counts and character milestone previews.
 - VTT campaign panel now displays map images, descriptions, tags, grid/status badges, AI-image badges, and lets DMs attach new map records to either the campaign or a specific session.
-- Maps workspace now documents the future Prompt -> OpenAI image -> Blob storage -> Map record -> Campaign/session use -> Optional public publish flow.
+- Editable map builder foundation with `/dashboard/maps/new` and `/dashboard/maps/[mapId]/edit`, using SVG grid rendering and structured `MapLayer.data` rather than flat images.
+- Map source tracking now supports manual maps, AI blueprint drafts, uploaded image maps, and hybrid AI/manual workflows through `MapSourceType`.
+- AI map blueprint route at `/api/ai/map-blueprint` generates strict JSON map blueprints, validates grid bounds and layer data, and can save validated drafts as editable map records.
+- Map blueprint utilities validate rooms, corridors, walls, doors, windows, stairs, terrain, obstacles, lighting notes, spawn points, secret areas, labels, and DM notes before save.
+- Maps workspace now documents the Prompt -> AI structured blueprint -> validation -> editable layers -> DM edits -> campaign/session use -> optional public publish flow.
 - Logged-in workspace redesign with session-aware top navigation, mobile app drawer navigation, softer card styling, denser overview cards, quick actions, and discoverable routes.
 - Dashboard overview now shows active campaigns, characters, pending approvals, recent dice rolls, recent homebrew, public library shortcuts, invite acceptance, email verification notice, and quick create actions.
 - Dedicated workspace routes: `/dashboard/account`, `/dashboard/homebrew`, `/dashboard/homebrew/spells/new`, `/dashboard/homebrew/items/new`, and `/dashboard/maps`.
@@ -114,8 +118,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Blob upload supports direct user-uploaded images, but AI image generation is still planned.
 - Session notes support markdown storage and mobile display, but there is no rich markdown editor or sanitizer yet.
 - Activity feed is persisted and displayed, but realtime delivery is still only an abstraction.
-- VTT data models and placeholder APIs exist, but map rendering, dynamic lighting, drag/drop tokens, and combat UI are intentionally not implemented.
-- AI map generation is planned but not fully implemented: prompts, metadata, library, clone/import, and image records exist, but the OpenAI image generation call and generated Blob upload pipeline are not wired yet.
+- VTT data models and a first editable map renderer exist, but advanced drag handles, token automation, fog of war, dynamic lighting, and combat UI are intentionally not implemented.
+- AI map generation is blueprint-first: structured JSON generation and validation exist, but OpenAI image generation and generated Blob upload pipelines are intentionally not wired yet.
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
 - Subscription models, feature gates, pricing page, and AI usage tracking exist, but Square checkout, webhooks, billing portal, invoices, and plan enforcement are intentionally not implemented.
 - Homebrew spell/item builder routes are usable entry points, but rich field-level spell/item editors and post-save image-upload handoff are still basic.
@@ -143,9 +147,12 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Resend verification support is preserved, but production delivery is temporarily optional because sending-domain setup is limited.
 - Legacy `SessionNote` remains in the schema for compatibility while new notes use `CampaignNote`.
 - Session/activity/VTT/map schema changes require `npm run db:push` on development databases.
+- Editable map builder schema changes require `npm run db:push` to add `MapSourceType`, `Map.blueprintVersion`, and `Map.editorState`.
 - Subscription/billing schema changes require `npm run db:push` on development databases.
 - Square integration is planned only; no checkout, webhooks, billing logic, or subscription enforcement should be expected yet.
 - `npm run seed:founders` is update-only and safe for passwords/data, but the live seed attempt in this pass could not reach the remote database from the Node script even after `npm run db:push` succeeded. Rerun it when the database is reachable.
+- The v1 map editor renders structured SVG elements and can add/erase basic element types, but precision drag handles, keyboard shortcuts, image export, fog, lighting, player view, and token automation are future phases.
+- AI map blueprints require `OPENAI_API_KEY` and a plan that passes `canUseFutureMapGeneration()`.
 
 ## Next Recommended Steps
 
@@ -154,8 +161,9 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 3. Add dedicated shell treatment for invite and verify-email standalone routes if they should share public chrome.
 4. Add Square checkout planning documents and webhook route stubs once billing requirements are finalized.
 5. Add active-route highlighting and richer notification detail views for the authenticated account menu.
-6. Wire the AI map generation service call and Blob save path behind the new map prompt/image models.
+6. Add richer map editor interactions: drag handles, snap controls, layer reordering, labels editing, and image export.
 7. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
+8. Add optional AI image generation as a visual/reference layer after blueprint editing is stable.
 
 ## Setup
 
@@ -235,12 +243,20 @@ Production Resend delivery is temporarily optional while the sending domain is l
 
 - Map records support `MapVisibility`: `CAMPAIGN_ONLY`, `PRIVATE_USER`, and `PUBLIC_LIBRARY`.
 - Map records support `MapApprovalStatus`: `DRAFT`, `PENDING_DM_REVIEW`, `APPROVED_PRIVATE`, `APPROVED_PUBLIC`, `REJECTED`, and `ARCHIVED`.
-- Map records support uploaded or AI-generated images through `MapImage`.
+- Map records support `MapSourceType`: `MANUAL`, `AI_BLUEPRINT`, `UPLOAD`, and `HYBRID`.
+- Map records store `blueprintVersion` and `editorState`; canonical editable geometry is stored in `MapLayer.data`.
+- The first map builder is conceptually inspired by fast sketch-style tabletop map tools, but it must not copy Dungeon Scrawl code, branding, UI, interactions, or assets.
+- Editable map data supports rooms, corridors, walls, doors, windows, stairs, terrain, obstacles, lighting notes, spawn points, secret areas, labels, DM notes, and layers.
+- AI map generation is blueprint-first: `/api/ai/map-blueprint` asks OpenAI for structured JSON, validates the blueprint, and saves only valid editable layer data.
+- Manual builder, AI blueprint builder, uploaded image reference maps, and hybrid AI/manual workflows are all represented in the data model.
+- Map records support uploaded or future AI-generated images through `MapImage`.
 - Map metadata supports prompts, grid type, grid width/height, recommended party level, environment/theme tags, interactive notes, spawn point JSON, lighting notes, and encounter suggestion JSON.
-- Prompt templates require top-down battle maps, clear terrain, no text labels, grid-friendly alignment, and VTT-readable contrast by default.
+- Blueprint prompt templates require top-down structure, square-grid alignment, no baked-in labels, clear terrain, VTT-readable contrast, and strict JSON output by default.
+- Static AI image prompt templates remain for later optional image generation and must not replace editable blueprint data.
 - Public map library search exists at `/maps` and filters by name/description, environment, theme, grid type, size, and creator.
 - Public map clone/import API foundation exists at `/api/maps/[mapId]/clone` for DMs to copy approved public maps into campaigns.
 - Full AI image generation is still planned; generated images should be saved to Blob storage before attaching to `MapImage`.
+- Future editor phases should add export image, token placement, fog of war, dynamic lighting, player view, and marketplace map packs.
 
 ## Subscription and Billing Foundation
 
@@ -279,7 +295,7 @@ npm run prisma:deploy
 
 Production should use a managed PostgreSQL database such as Neon, Supabase, Render, Railway, or Vercel Postgres.
 
-Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, `AIUsage`, `User.isFounder`, and `User.founderSince`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, founder access, AI usage tracking, or VTT placeholders locally.
+Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, `AIUsage`, `User.isFounder`, `User.founderSince`, `Map.sourceType`, `Map.blueprintVersion`, and `Map.editorState`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, founder access, AI usage tracking, or editable map builder features locally.
 
 ## Deployment
 
@@ -381,6 +397,10 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Public map library page and safe search filters
 - [x] Public map clone/import API foundation
 - [x] Top-down VTT map prompt templates
+- [x] Editable map builder routes
+- [x] AI map blueprint route
+- [x] Map blueprint validation and layer conversion utilities
+- [x] Structured SVG map renderer foundation
 - [x] True campaign dashboard route
 - [x] Campaign gameplay loop dashboard polish
 - [x] Maps foundation UI polish
@@ -416,7 +436,8 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Realtime transport behind event bus
 - [ ] Rich markdown editor and sanitization for notes
 - [ ] Route-level database tests for session/activity APIs
-- [ ] AI map generation service route and Blob save pipeline
+- [ ] Rich map editor drag handles, snap controls, and layer reordering
+- [ ] AI map image generation and Blob save pipeline
 - [ ] Campaign UI for public map clone/import
 - [ ] Square checkout design and route stubs
 - [ ] Active route highlighting for workspace navigation
@@ -437,7 +458,7 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Uploaded map image attachment UI
 - [ ] Map approval/publication workflow UI
 - [ ] Discord integration
-- [ ] Full VTT map rendering
+- [ ] Full VTT token/map rendering
 - [ ] Dynamic lighting
 - [ ] Realtime dice/activity updates
 - [ ] Auth validation test suite

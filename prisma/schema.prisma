@@ -123,6 +123,13 @@ enum MapGridType {
   NONE
 }
 
+enum MapSourceType {
+  MANUAL
+  AI_BLUEPRINT
+  UPLOAD
+  HYBRID
+}
+
 enum SubscriptionPlanCode {
   FREE
   DM
@@ -552,6 +559,9 @@ model Map {
   description           String?
   visibility            MapVisibility     @default(CAMPAIGN_ONLY)
   approvalStatus        MapApprovalStatus @default(DRAFT)
+  sourceType            MapSourceType     @default(MANUAL)
+  blueprintVersion      Int               @default(1)
+  editorState           Json              @default("{}")
   gridType              MapGridType       @default(SQUARE)
   width                 Int               @default(30)
   height                Int               @default(30)

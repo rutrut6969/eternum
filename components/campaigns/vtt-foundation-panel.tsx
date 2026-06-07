@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
@@ -63,7 +64,7 @@ export function VttFoundationPanel({
         <Badge tone="violet">data layer only</Badge>
       </div>
       <p className="mt-3 text-sm leading-6 text-zinc-300">
-        Map records can attach to the campaign or a specific session. AI generation is planned as top-down battle map creation saved to Blob storage before publication.
+        Map records can attach to the campaign or a specific session. AI generation starts with editable blueprints; image generation remains a later optional visual layer.
       </p>
       {canManage ? (
         <form className="mt-5 grid gap-2 sm:grid-cols-[1fr_auto] lg:grid-cols-[1fr_0.8fr_auto]" onSubmit={createMap}>
@@ -98,13 +99,16 @@ export function VttFoundationPanel({
                 {map.sessionTitle ? ` - ${map.sessionTitle}` : ""}
               </p>
               {map.tags?.length ? <p className="mt-2 text-xs text-zinc-500">{map.tags.map((tag) => tag.label).join(" / ")}</p> : null}
+              <Link className="mt-3 inline-flex rounded-md border border-white/10 px-3 py-2 text-sm font-semibold text-zinc-100 hover:bg-white/5" href={`/dashboard/maps/${map.id}/edit`}>
+                Open editor
+              </Link>
             </div>
           </div>
           );
         })}
         <div className="rounded-md border border-dashed border-white/10 bg-black/15 p-3">
-          <p className="text-sm font-semibold text-white">AI map generator coming soon</p>
-          <p className="mt-2 text-xs leading-5 text-zinc-400">Prompt - OpenAI image - Blob storage - map record - campaign/session use - optional public publish.</p>
+          <p className="text-sm font-semibold text-white">AI blueprint builder</p>
+          <p className="mt-2 text-xs leading-5 text-zinc-400">Prompt - structured blueprint - validation - editable layers - DM edits - optional public publish.</p>
         </div>
       </div>
     </Card>

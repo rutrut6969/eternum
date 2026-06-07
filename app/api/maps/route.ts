@@ -1,8 +1,10 @@
-import { MapGridType, MapVisibility, Prisma } from "@prisma/client";
+import { MapGridType, MapSourceType, MapVisibility, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserId } from "@/lib/auth/session";
+import { requireCampaignDm } from "@/lib/campaign-auth";
 import { prisma } from "@/lib/prisma";
+import { subscriptionService } from "@/lib/subscriptions/service";
 
 const mapCreateSchema = z.object({
   name: z.string().min(2).max(160),
@@ -16,6 +18,8 @@ const mapCreateSchema = z.object({
   environment: z.string().max(80).optional(),
   theme: z.string().max(80).optional(),
   prompt: z.string().max(4000).optional(),
+  sourceType: z.nativeEnum(MapSourceType).default("MANUAL"),
+  editorState: z.record(z.unknown()).default({}),
   interactiveNotes: z.string().max(4000).optional(),
   lightingNotes: z.string().max(4000).optional(),
   encounterSuggestions: z.array(z.unknown()).default([]),
@@ -82,6 +86,23 @@ export async function POST(request: Request) {
   const parsed = mapCreateSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid map details." }, { status: 400 });
 
+  const isFounder = await subscriptionService.isFounder(userId);
+  if (parsed.data.campaignId && !isFounder) {
+    try {
+      await requireCampaignDm(parsed.data.campaignId, userId);
+    } catch {
+      return NextResponse.json({ error: "DM permission required for campaign maps." }, { status: 403 });
+    }
+  }
+
+  if (parsed.data.sessionId && parsed.data.campaignId) {
+    const session = await prisma.campaignSession.findFirst({
+      where: { id: parsed.data.sessionId, campaignId: parsed.data.campaignId },
+      select: { id: true }
+    });
+    if (!session) return NextResponse.json({ error: "Session does not belong to this campaign." }, { status: 400 });
+  }
+
   const map = await prisma.map.create({
     data: {
       name: parsed.data.name,
@@ -97,6 +118,8 @@ export async function POST(request: Request) {
       environment: parsed.data.environment,
       theme: parsed.data.theme,
       prompt: parsed.data.prompt,
+      sourceType: parsed.data.sourceType,
+      editorState: parsed.data.editorState as Prisma.InputJsonValue,
       interactiveNotes: parsed.data.interactiveNotes,
       lightingNotes: parsed.data.lightingNotes,
       encounterSuggestions: parsed.data.encounterSuggestions as Prisma.InputJsonValue,
@@ -104,7 +127,7 @@ export async function POST(request: Request) {
       visibility: parsed.data.campaignId ? MapVisibility.CAMPAIGN_ONLY : MapVisibility.PRIVATE_USER,
       createdById: userId,
       tags: { create: parsed.data.tags.map((label) => ({ label })) },
-      layers: { create: [{ name: "Base", order: 0 }] }
+      layers: { create: [{ name: "Base", order: 0, data: { elements: [] } }] }
     },
     include: { tags: true, layers: true }
   });

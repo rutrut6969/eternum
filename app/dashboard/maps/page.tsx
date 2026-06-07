@@ -27,21 +27,29 @@ export default async function DashboardMapsPage() {
     <main className="mx-auto max-w-7xl px-4 py-7 sm:px-5 sm:py-10">
       <Badge tone="mana">VTT Foundation</Badge>
       <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl">Maps workspace</h1>
-      <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">Manage uploaded and future AI-generated map records for campaigns and sessions. Full VTT rendering is still planned.</p>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">Manage editable map blueprints, uploaded reference images, and future AI-assisted campaign maps. Full token automation, fog, and dynamic lighting are still planned.</p>
+      <div className="mt-5 flex flex-wrap gap-3">
+        <Link className="inline-flex whitespace-nowrap rounded-md bg-aureate px-4 py-3 text-sm font-semibold text-void" href="/dashboard/maps/new">
+          Create editable map
+        </Link>
+        <Link className="inline-flex whitespace-nowrap rounded-md border border-mana/30 px-4 py-3 text-sm font-semibold text-mana hover:bg-mana/10" href="/maps">
+          Browse public maps
+        </Link>
+      </div>
 
       <section className="mt-8 grid gap-4 md:grid-cols-2">
         <Card>
-          <h2 className="text-2xl font-bold text-white">Upload Map</h2>
-          <p className="mt-3 text-sm leading-6 text-zinc-300">Map image attachment UI is planned on top of the existing Blob upload foundation. Use campaign VTT panels to create map records for now.</p>
+          <h2 className="text-2xl font-bold text-white">Editable Builder</h2>
+          <p className="mt-3 text-sm leading-6 text-zinc-300">Create rooms, corridors, doors, terrain, labels, notes, secrets, and spawn points as structured grid data instead of flattening every map into an image.</p>
           <Link className="mt-5 inline-flex whitespace-nowrap rounded-md border border-mana/30 px-4 py-3 text-sm font-semibold text-mana hover:bg-mana/10" href="/dashboard/campaigns">
             Open campaigns
           </Link>
         </Card>
         <Card>
-          <h2 className="text-2xl font-bold text-white">AI Map Generator Coming Soon</h2>
-          <p className="mt-3 text-sm leading-6 text-zinc-300">Prompts will default to top-down, no-label, grid-aligned, high-contrast battle maps saved to Blob storage before DM approval/publication.</p>
-          <Link className="mt-5 inline-flex whitespace-nowrap rounded-md border border-aureate/30 px-4 py-3 text-sm font-semibold text-aureate hover:bg-aureate/10" href="/maps">
-            Browse public maps
+          <h2 className="text-2xl font-bold text-white">AI Blueprint Drafts</h2>
+          <p className="mt-3 text-sm leading-6 text-zinc-300">AI map generation now starts with validated JSON blueprints that the DM can edit. Static AI image generation remains a later optional visual layer.</p>
+          <Link className="mt-5 inline-flex whitespace-nowrap rounded-md border border-aureate/30 px-4 py-3 text-sm font-semibold text-aureate hover:bg-aureate/10" href="/dashboard/maps/new">
+            Start map builder
           </Link>
         </Card>
       </section>
@@ -50,7 +58,7 @@ export default async function DashboardMapsPage() {
         <Card>
           <h2 className="text-xl font-bold text-white">Future AI map flow</h2>
           <p className="mt-3 text-sm leading-6 text-zinc-300">
-            Prompt - OpenAI image - Blob storage - map record - campaign/session use - optional public publication. Generation remains disabled until the image model and moderation flow are wired.
+            Prompt - AI structured blueprint - validation - editable layers - DM edits - campaign/session use - optional public publication. Later image generation can add Blob-backed visuals without replacing editable data.
           </p>
         </Card>
       </section>
@@ -76,6 +84,9 @@ export default async function DashboardMapsPage() {
               {map.description ? <p className="mt-3 text-sm leading-6 text-zinc-300">{map.description}</p> : null}
               <p className="mt-2 text-sm text-zinc-400">{map.campaign?.name || map.visibility.replace(/_/g, " ")}{map.session ? ` / ${map.session.title}` : ""}</p>
               {map.tags.length ? <p className="mt-3 text-xs text-zinc-500">{map.tags.map((tag) => tag.label).join(" / ")}</p> : null}
+              <Link className="mt-5 inline-flex whitespace-nowrap rounded-md border border-white/10 px-4 py-3 text-sm font-semibold text-zinc-100 hover:bg-white/5" href={`/dashboard/maps/${map.id}/edit`}>
+                Open editor
+              </Link>
             </Card>
           );
         })}
