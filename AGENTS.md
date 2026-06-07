@@ -39,8 +39,11 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - DM approval is required before AI or homebrew content becomes usable in a campaign.
 - Public library queries must only show approved public content.
 - Founder tier is the highest access tier and should pass all subscription gates.
+- Founder access must be stored in the database with `User.isFounder` and an active `FOUNDER` subscription. `FOUNDER_ACCOUNTS` alone does not update existing users until `npm run seed:founders` runs against the target database.
+- Founder accounts bypass Square checkout and all current premium gates.
 - Free users should not see DM tools unless they are DMs or Assistant DMs in a campaign.
 - Do not implement payment processing, Discord, full VTT combat, dynamic lighting, or AI image generation unless explicitly requested.
+- Square credentials must stay server-only. Use `SQUARE_ENVIRONMENT=sandbox|production` and the matching sandbox/production token/application/location/webhook variables.
 - The map builder may be inspired by the broad category of sketch-style tabletop map editors, but must not copy Dungeon Scrawl code, branding, UI, interaction design, or assets.
 - Structured editable map data is preferred over flat map images. Rooms, corridors, terrain, notes, spawn points, and secrets should remain editable through `MapLayer.data`.
 - AI map generation should produce validated map blueprints before any data is saved. AI image generation is separate and should not replace editable blueprint data.

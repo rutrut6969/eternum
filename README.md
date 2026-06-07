@@ -66,10 +66,11 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Public library is database-backed and only shows `APPROVED_PUBLIC` content with `PUBLIC_LIBRARY` visibility.
 - Public library filters include content type, rarity, discipline, profession requirement, creator, campaign source, and name/description search.
 - Public library Prisma query is now defensive: it filters only safe scalar fields in Prisma and moves fuzzy/search/JSON filters into application-side filtering with friendly error handling.
-- Pricing page foundation at `/pricing` with planned Free, DM, Worldbuilder, and Founder tiers. No payment buttons or checkout flows exist yet.
+- Pricing page at `/pricing` with Free, DM, Worldbuilder, and Founder tiers plus Square checkout buttons for paid plans.
 - Subscription and billing schema foundation for `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, and `AIUsage`.
 - Subscription feature-gate service foundation with `canCreateCampaign()`, `canUseAdvancedAI()`, `canPublishPublicHomebrew()`, `canUseFutureMapGeneration()`, and `canUseFutureDiscordFeatures()`.
-- Founder/max-tier support with `isFounder`, `founderSince`, Founder badges, and a safe `npm run seed:founders` update script.
+- Founder/max-tier support with `isFounder`, `founderSince`, active Founder subscriptions, Founder badges, safe `npm run seed:founders`, and `npm run debug:user -- identifier`.
+- Square billing foundation with server-side environment selector, checkout route at `/api/billing/checkout`, webhook route at `/api/billing/square/webhook`, payment-link creation, webhook signature verification, billing events, marketplace purchase models, and entitlement grant foundation.
 - Server-side gates now include `canAccessDmTools()` and are wired into campaign creation, advanced AI routes, and public homebrew publishing.
 - Monthly AI usage tracking is wired into backstory, spell, and item AI routes after authorization checks.
 - Registration usernames can auto-generate from Display Name, stop auto-updating after manual edits, and reset from display name on demand.
@@ -129,7 +130,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - VTT data models and a first editable map renderer exist, but advanced drag handles, token automation, fog of war, dynamic lighting, and combat UI are intentionally not implemented.
 - AI map generation is blueprint-first: structured JSON generation and validation exist, but OpenAI image generation and generated Blob upload pipelines are intentionally not wired yet.
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
-- Subscription models, feature gates, pricing page, and AI usage tracking exist, but Square checkout, webhooks, billing portal, invoices, and plan enforcement are intentionally not implemented.
+- Subscription models, feature gates, pricing page, Square checkout, webhook foundation, and AI usage tracking exist, but full Square subscription lifecycle sync, billing portal, invoices, refunds, and customer self-service are still partial.
 - Homebrew spell/item builder routes are usable entry points, but rich field-level spell/item editors and post-save image-upload handoff are still basic.
 - Unified assistant stores structured drafts and workflow state, but it does not yet convert assistant workflows directly into saved homebrew, characters, NPCs, monsters, quests, or DM review submissions.
 - Currency wallets and transfers are implemented, but loot event detection, pending inventory updates, manual loot queues, and auto-approval settings are still planned.
@@ -160,8 +161,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Session/activity/VTT/map schema changes require `npm run db:push` on development databases.
 - Editable map builder schema changes require `npm run db:push` to add `MapSourceType`, `Map.blueprintVersion`, and `Map.editorState`.
 - Subscription/billing schema changes require `npm run db:push` on development databases.
-- Square integration is planned only; no checkout, webhooks, billing logic, or subscription enforcement should be expected yet.
-- `npm run seed:founders` is update-only and safe for passwords/data, but the live seed attempt in this pass could not reach the remote database from the Node script even after `npm run db:push` succeeded. Rerun it when the database is reachable.
+- Square checkout and webhook foundations are implemented, but production Square configuration, subscription catalog mapping, refunds, invoices, and customer portal management still need operational setup.
+- `npm run seed:founders` is update-only and safe for passwords/data. It must be run against the database where the target user already exists.
 - The v1 map editor renders structured SVG elements and can add/erase basic element types, but precision drag handles, keyboard shortcuts, image export, fog, lighting, player view, and token automation are future phases.
 - AI map blueprints require `OPENAI_API_KEY` and a plan that passes `canUseFutureMapGeneration()`.
 - Unified assistant messages require `OPENAI_API_KEY` and currently use the existing advanced AI feature gate.
@@ -170,16 +171,17 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 
 ## Next Recommended Steps
 
-1. Rerun `npm run seed:founders` when the database is reachable to promote configured founder accounts.
-2. Add dedicated DM tools routes for approvals, sessions, hidden rolls, member management, and campaign settings.
-3. Add dedicated shell treatment for invite and verify-email standalone routes if they should share public chrome.
-4. Add Square checkout planning documents and webhook route stubs once billing requirements are finalized.
-5. Add active-route highlighting and richer notification detail views for the authenticated account menu.
-6. Add richer map editor interactions: drag handles, snap controls, layer reordering, labels editing, and image export.
-7. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
-8. Add optional AI image generation as a visual/reference layer after blueprint editing is stable.
-9. Add assistant workflow actions that convert structured drafts into spell/item/NPC/monster/map records and submit them to DM review.
-10. Add assistant campaign memory retrieval for session summaries, NPCs, quests, loot, decisions, and character milestones.
+1. Configure Square sandbox credentials and verify `/api/billing/checkout` creates payment links.
+2. Run `npm run seed:founders` in each environment after adding `FOUNDER_ACCOUNTS`, then verify with `npm run debug:user -- email-or-username`.
+3. Add dedicated DM tools routes for approvals, sessions, hidden rolls, member management, and campaign settings.
+4. Add dedicated shell treatment for invite and verify-email standalone routes if they should share public chrome.
+5. Verify Square sandbox webhook payload metadata end-to-end and add deeper subscription lifecycle reconciliation.
+6. Add active-route highlighting and richer notification detail views for the authenticated account menu.
+7. Add richer map editor interactions: drag handles, snap controls, layer reordering, labels editing, and image export.
+8. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
+9. Add optional AI image generation as a visual/reference layer after blueprint editing is stable.
+10. Add assistant workflow actions that convert structured drafts into spell/item/NPC/monster/map records and submit them to DM review.
+11. Add assistant campaign memory retrieval for session summaries, NPCs, quests, loot, decisions, and character milestones.
 
 ## Setup
 
@@ -204,13 +206,41 @@ Open [http://localhost:3000](http://localhost:3000).
 - `RESEND_API_KEY`: Required to send verification emails.
 - `EMAIL_FROM`: Sender address for Resend, for example `noreply@eternumtabletop.com`.
 - `BLOB_READ_WRITE_TOKEN`: Vercel Blob token for homebrew image uploads. Image URL fields work without upload support.
-- `FOUNDER_ACCOUNTS`: Optional comma-separated emails or usernames to promote with `npm run seed:founders`. If omitted, the local seed uses the configured founder username default.
+- `FOUNDER_ACCOUNTS`: Optional comma-separated emails, usernames, or display usernames to promote with `npm run seed:founders`. If omitted, the seed exits safely without changing accounts.
+- `SQUARE_ENVIRONMENT`: `sandbox` or `production`.
+- `SQUARE_SANDBOX_ACCESS_TOKEN`, `SQUARE_SANDBOX_APPLICATION_ID`, `SQUARE_SANDBOX_LOCATION_ID`, `SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY`: Square sandbox credentials.
+- `SQUARE_PRODUCTION_ACCESS_TOKEN`, `SQUARE_PRODUCTION_APPLICATION_ID`, `SQUARE_PRODUCTION_LOCATION_ID`, `SQUARE_PRODUCTION_WEBHOOK_SIGNATURE_KEY`: Square production credentials.
+- `SQUARE_WEBHOOK_NOTIFICATION_URL`: Exact webhook URL registered in Square. Must match the URL used for signature verification.
 
 `EMAIL_VERIFICATION_PROVIDER` and `EMAIL_VERIFICATION_API_KEY` have been deprecated in favor of Resend verification links.
 
-No new environment variables were added in this pass.
+New Square environment variables were added in this pass. The deprecated email verification provider variables remain removed in favor of Resend.
 
-Square subscription integration is planned but not implemented. Future billing work is expected to add Square environment variables such as application credentials, location IDs, webhook signatures, and checkout settings once the provider design is finalized.
+Square subscription integration uses server-only credentials selected by `SQUARE_ENVIRONMENT`. Founder accounts bypass checkout and must be promoted in the database with `npm run seed:founders`.
+
+## Founder Account Setup
+
+1. Add comma-separated emails/usernames/display usernames to `FOUNDER_ACCOUNTS`.
+2. Run `npm run seed:founders` against the target database.
+3. Verify with `npm run debug:user -- plagueformula@gmail.com`.
+4. For Vercel/production, add `FOUNDER_ACCOUNTS` to Vercel env vars and run the seed against the production database. Adding the env var alone does not update existing users.
+
+Founder seeding:
+
+- Matches email, username, or display username case-insensitively.
+- Does not change passwords.
+- Does not recreate accounts.
+- Does not delete user data.
+- Sets `emailVerified`.
+- Sets `User.isFounder`, `founderSince`, and an active `FOUNDER` subscription with source `FOUNDER`.
+
+## Square Billing Setup
+
+1. Set `SQUARE_ENVIRONMENT=sandbox`.
+2. Add sandbox access token, application ID, location ID, and webhook signature key.
+3. Register `/api/billing/square/webhook` in Square and set `SQUARE_WEBHOOK_NOTIFICATION_URL` to the exact public URL.
+4. Use `/pricing` checkout buttons for DM/Worldbuilder test payment links.
+5. Switch `SQUARE_ENVIRONMENT=production` only after production credentials and webhook URL are configured.
 
 ## Account Rules
 
@@ -397,6 +427,12 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Founder/max-tier schema fields
 - [x] Founder seed/update script
 - [x] Server-side founder/subscription gates for DM tools, campaign creation, advanced AI, and public publishing
+- [x] Founder debug script
+- [x] Founder subscriptions with database-stored lifetime source
+- [x] Square sandbox/production config helper
+- [x] Square checkout route and pricing buttons
+- [x] Square webhook route with signature verification
+- [x] Marketplace purchase and entitlement schema foundation
 - [x] AI usage tracking schema and route increments
 - [x] Display-name-to-username autofill and reset behavior
 - [x] Image storage metadata foundation
@@ -475,12 +511,12 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Rich map editor drag handles, snap controls, and layer reordering
 - [ ] AI map image generation and Blob save pipeline
 - [ ] Campaign UI for public map clone/import
-- [ ] Square checkout design and route stubs
+- [ ] Square production credential setup and live checkout verification
+- [ ] Full Square subscription lifecycle reconciliation
 - [ ] Active route highlighting for workspace navigation
 - [ ] Editable account profile settings
 - [ ] Richer notification inbox/details
 - [ ] Dedicated DM tools landing pages
-- [ ] Rerun founder seed against reachable database
 - [ ] Optional public shell for invite and email verification standalone routes
 
 ### Planned
@@ -491,8 +527,6 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] NPC profile and roleplay mode
 - [ ] Monster creator and statblock balancing
 - [ ] Campaign memory summaries and retrieval
-- [ ] Square checkout
-- [ ] Square webhooks
 - [ ] Subscription billing portal
 - [ ] Subscription enforcement policy
 - [ ] AI-generated top-down map images

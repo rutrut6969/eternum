@@ -199,14 +199,49 @@ enum SubscriptionStatus {
 
 enum BillingEventType {
   CHECKOUT_CREATED
+  MARKETPLACE_CHECKOUT_CREATED
   SUBSCRIPTION_CREATED
   SUBSCRIPTION_UPDATED
   SUBSCRIPTION_CANCELED
+  SUBSCRIPTION_CHECKOUT_CREATED
   PAYMENT_SUCCEEDED
   PAYMENT_FAILED
+  ENTITLEMENT_GRANTED
   REFUND_CREATED
   WEBHOOK_RECEIVED
   MANUAL_ADJUSTMENT
+}
+
+enum BillingSource {
+  SQUARE
+  MANUAL
+  FOUNDER
+}
+
+enum MarketplaceProductType {
+  COMPENDIUM
+  RULESET
+  ASSET_PACK
+  MAP_PACK
+  TOKEN_PACK
+  CAMPAIGN_MODULE
+  AI_CREDIT_PACK
+  HOMEBREW_PACK
+}
+
+enum MarketplaceProductStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  ARCHIVED
+}
+
+enum PurchaseStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELED
+  REFUNDED
 }
 
 enum CurrencyTransactionType {
@@ -262,6 +297,9 @@ model User {
   currencyTransactions CurrencyTransaction[] @relation("CurrencyTransactionActor")
   subscriptions   UserSubscription[]
   billingEvents   BillingEvent[]
+  marketplaceProducts MarketplaceProduct[] @relation("MarketplaceProductCreator")
+  marketplacePurchases MarketplacePurchase[]
+  userEntitlements UserEntitlement[]
   aiUsage         AIUsage[]
 }
 
@@ -275,6 +313,8 @@ model SubscriptionPlan {
   features    Json                 @default("{}")
   active      Boolean              @default(true)
   sortOrder   Int                  @default(0)
+  squareCatalogObjectId String?
+  squareVariationId     String?
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 
@@ -286,7 +326,9 @@ model UserSubscription {
   userId               String
   planId               String
   status               SubscriptionStatus @default(ACTIVE)
+  source               BillingSource      @default(MANUAL)
   startedAt            DateTime           @default(now())
+  currentPeriodEnd     DateTime?
   expiresAt            DateTime?
   squareCustomerId     String?
   squareSubscriptionId String?            @unique
@@ -316,6 +358,80 @@ model BillingEvent {
 
   @@index([userId, createdAt])
   @@index([provider, providerEventId])
+}
+
+model MarketplaceProduct {
+  id          String                   @id @default(cuid())
+  creatorId   String?
+  name        String
+  slug        String                   @unique
+  description String?
+  type        MarketplaceProductType
+  status      MarketplaceProductStatus @default(DRAFT)
+  priceCents  Int                      @default(0)
+  currency    String                   @default("USD")
+  coverImageUrl String?
+  tags        Json                     @default("[]")
+  includedContent Json                 @default("{}")
+  official    Boolean                  @default(false)
+  squareCatalogObjectId String?
+  squareVariationId     String?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  creator User? @relation("MarketplaceProductCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  purchases MarketplacePurchase[]
+  userEntitlements UserEntitlement[]
+  campaignEntitlements CampaignEntitlement[]
+}
+
+model MarketplacePurchase {
+  id          String         @id @default(cuid())
+  userId      String
+  productId   String
+  status      PurchaseStatus @default(PENDING)
+  amountCents Int
+  currency    String         @default("USD")
+  squarePaymentId String?
+  squareOrderId   String?
+  checkoutUrl     String?
+  metadata    Json           @default("{}")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product MarketplaceProduct @relation(fields: [productId], references: [id])
+
+  @@index([userId, status])
+  @@index([productId, status])
+}
+
+model UserEntitlement {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  source    String   @default("purchase")
+  active    Boolean  @default(true)
+  grantedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product MarketplaceProduct @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+}
+
+model CampaignEntitlement {
+  id         String   @id @default(cuid())
+  campaignId String
+  productId  String
+  enabledById String?
+  active     Boolean  @default(true)
+  grantedAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product MarketplaceProduct @relation(fields: [productId], references: [id])
+
+  @@unique([campaignId, productId])
 }
 
 model AIUsage {
@@ -428,6 +544,7 @@ model Campaign {
   assistantThreads AssistantThread[]
   partyTreasury PartyTreasury?
   currencyTransactions CurrencyTransaction[]
+  campaignEntitlements CampaignEntitlement[]
 }
 
 model CampaignMember {

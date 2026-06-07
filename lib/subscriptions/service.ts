@@ -1,7 +1,7 @@
 import type { SubscriptionPlanCode, SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-type FeatureKey = "dmTools" | "campaigns" | "advancedAi" | "publicHomebrew" | "mapGeneration" | "discord";
+type FeatureKey = "dmTools" | "campaigns" | "advancedAi" | "publicHomebrew" | "mapGeneration" | "discord" | "marketplace" | "compendiums" | "selling" | "premium";
 
 const activeStatuses: SubscriptionStatus[] = ["ACTIVE", "TRIALING"];
 
@@ -12,7 +12,11 @@ const planFeatures: Record<SubscriptionPlanCode, Record<FeatureKey, boolean>> = 
     advancedAi: false,
     publicHomebrew: true,
     mapGeneration: false,
-    discord: false
+    discord: false,
+    marketplace: false,
+    compendiums: false,
+    selling: false,
+    premium: false
   },
   DM: {
     dmTools: true,
@@ -20,7 +24,11 @@ const planFeatures: Record<SubscriptionPlanCode, Record<FeatureKey, boolean>> = 
     advancedAi: true,
     publicHomebrew: true,
     mapGeneration: false,
-    discord: false
+    discord: false,
+    marketplace: true,
+    compendiums: false,
+    selling: false,
+    premium: true
   },
   WORLDBUILDER: {
     dmTools: true,
@@ -28,7 +36,11 @@ const planFeatures: Record<SubscriptionPlanCode, Record<FeatureKey, boolean>> = 
     advancedAi: true,
     publicHomebrew: true,
     mapGeneration: true,
-    discord: true
+    discord: true,
+    marketplace: true,
+    compendiums: true,
+    selling: true,
+    premium: true
   },
   FOUNDER: {
     dmTools: true,
@@ -36,7 +48,11 @@ const planFeatures: Record<SubscriptionPlanCode, Record<FeatureKey, boolean>> = 
     advancedAi: true,
     publicHomebrew: true,
     mapGeneration: true,
-    discord: true
+    discord: true,
+    marketplace: true,
+    compendiums: true,
+    selling: true,
+    premium: true
   }
 };
 
@@ -91,6 +107,18 @@ export const subscriptionService = {
   },
   canUseFutureDiscordFeatures(userId: string) {
     return canUse(userId, "discord");
+  },
+  canAccessMarketplaceProduct(userId: string) {
+    return canUse(userId, "marketplace");
+  },
+  canCreateCompendium(userId: string) {
+    return canUse(userId, "compendiums");
+  },
+  canSellCompendium(userId: string) {
+    return canUse(userId, "selling");
+  },
+  canUsePremiumFeatures(userId: string) {
+    return canUse(userId, "premium");
   }
 };
 

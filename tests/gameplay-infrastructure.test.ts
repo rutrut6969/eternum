@@ -3,6 +3,7 @@ import { createEmailVerificationToken, isVerificationTokenExpired } from "@/lib/
 import { usernameFromDisplayName, validateUsername } from "@/lib/auth/validation";
 import { assistantSystemPrompt, classifyAssistantIntent } from "@/lib/assistant/intents";
 import { formatCurrency, fromCopper, splitCopper, toCopper } from "@/lib/currency/conversion";
+import crypto from "node:crypto";
 import { getInviteStatus } from "@/lib/invites";
 import { blueprintToMapLayers, createBlankMapBlueprint, validateMapBlueprint } from "@/lib/maps/blueprint-schema";
 import { buildEditableMapBlueprintPrompt, buildTopDownBattleMapPrompt } from "@/lib/maps/prompt-templates";
@@ -11,6 +12,7 @@ import { milestoneForGameplayChange, professionMilestone } from "@/lib/milestone
 import { transitionSessionStatus } from "@/lib/sessions";
 import { buildCampaignTimeline } from "@/lib/timeline";
 import { maxImageSizeBytes, validateImageUpload } from "@/lib/uploads";
+import { getSquareConfig, verifySquareWebhookSignature } from "@/lib/billing/square";
 
 describe("campaign session transitions", () => {
   it("starts and completes sessions in order", () => {
@@ -186,5 +188,26 @@ describe("currency conversion", () => {
 
   it("splits currency with an explicit remainder", () => {
     expect(splitCopper(101, 4)).toEqual({ share: 25, remainder: 1 });
+  });
+});
+
+describe("square billing helpers", () => {
+  it("selects sandbox by default and verifies webhook signatures", () => {
+    const previousEnv = process.env.SQUARE_ENVIRONMENT;
+    const previousKey = process.env.SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY;
+    process.env.SQUARE_ENVIRONMENT = "sandbox";
+    process.env.SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY = "test-signature-key";
+
+    const config = getSquareConfig();
+    const notificationUrl = "https://example.com/api/billing/square/webhook";
+    const rawBody = JSON.stringify({ type: "payment.created" });
+    const signature = crypto.createHmac("sha256", "test-signature-key").update(notificationUrl + rawBody).digest("base64");
+
+    expect(config.environment).toBe("sandbox");
+    expect(verifySquareWebhookSignature({ notificationUrl, rawBody, signature })).toBe(true);
+    expect(verifySquareWebhookSignature({ notificationUrl, rawBody, signature: "bad" })).toBe(false);
+
+    process.env.SQUARE_ENVIRONMENT = previousEnv;
+    process.env.SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY = previousKey;
   });
 });

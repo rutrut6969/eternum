@@ -48,12 +48,15 @@ export default async function AccountPage() {
             <h2 className="text-xl font-bold text-white">Subscription</h2>
             <Badge tone={planCode === "FOUNDER" ? "gold" : "mana"}>{planCode === "FOUNDER" ? "Founder" : planCode}</Badge>
           </div>
-          <p className="mt-3 text-sm leading-6 text-zinc-300">Square checkout, webhooks, invoices, and billing management are planned. This page currently reflects the foundation state only.</p>
+          <p className="mt-3 text-sm leading-6 text-zinc-300">Square checkout and webhook foundations are active. Billing portal management is still a placeholder until Square customer management is expanded.</p>
           {user.isFounder ? <p className="mt-3 rounded-md border border-aureate/20 bg-aureate/10 p-2 text-sm text-aureate">Max Tier / Lifetime Access</p> : null}
           <div className="mt-4 grid gap-2 text-sm text-zinc-300">
             <p>Status: <span className="text-white">{subscription?.status ?? "FREE"}</span></p>
+            <p>Source: <span className="text-white">{subscription?.source ?? (user.isFounder ? "FOUNDER" : "N/A")}</span></p>
             <p>Started: <span className="text-white">{subscription?.startedAt ? subscription.startedAt.toLocaleDateString() : "N/A"}</span></p>
-            <p>Expires: <span className="text-white">{subscription?.expiresAt ? subscription.expiresAt.toLocaleDateString() : "N/A"}</span></p>
+            <p>Current period end: <span className="text-white">{subscription?.currentPeriodEnd ? subscription.currentPeriodEnd.toLocaleDateString() : "N/A"}</span></p>
+            <p>Expires: <span className="text-white">{user.isFounder ? "Lifetime" : subscription?.expiresAt ? subscription.expiresAt.toLocaleDateString() : "N/A"}</span></p>
+            <p>Square customer: <span className="text-white">{subscription?.squareCustomerId ? "Connected" : "Not connected"}</span></p>
           </div>
           <Link className="mt-5 inline-flex rounded-md border border-aureate/30 px-4 py-3 text-sm font-semibold text-aureate hover:bg-aureate/10" href="/pricing">
             View planned tiers

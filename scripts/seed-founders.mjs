@@ -2,13 +2,10 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const defaultFounderIdentifiers = ["plagueformula"];
-
 function parseFounderIdentifiers() {
   const raw = process.env.FOUNDER_ACCOUNTS;
-  const identifiers = raw
-    ? raw.split(",").map((value) => value.trim()).filter(Boolean)
-    : defaultFounderIdentifiers;
+  if (!raw) return [];
+  const identifiers = raw.split(",").map((value) => value.trim()).filter(Boolean);
 
   return [...new Set(identifiers.map((value) => value.toLowerCase()))];
 }
@@ -61,6 +58,10 @@ async function ensureFounderPlan() {
 
 async function main() {
   const identifiers = parseFounderIdentifiers();
+  if (identifiers.length === 0) {
+    console.log("FOUNDER_ACCOUNTS is not set. No founder accounts were updated.");
+    return;
+  }
   const founderPlan = await ensureFounderPlan();
   const now = new Date();
 
@@ -68,9 +69,13 @@ async function main() {
 
   for (const identifier of identifiers) {
     const user = await prisma.user.findFirst({
-      where: identifier.includes("@")
-        ? { email: identifier }
-        : { username: identifier }
+      where: {
+        OR: [
+          { email: { equals: identifier, mode: "insensitive" } },
+          { username: { equals: identifier, mode: "insensitive" } },
+          { displayUsername: { equals: identifier, mode: "insensitive" } }
+        ]
+      }
     });
 
     if (!user) {
@@ -84,8 +89,7 @@ async function main() {
         isFounder: true,
         founderSince: user.founderSince ?? now,
         emailVerified: user.emailVerified ?? now,
-        globalRoles: { set: ["PLAYER", "DM"] },
-        ...(user.username === "plagueformula" ? { name: "PlageFormula", displayUsername: "plagueformula" } : {})
+        globalRoles: { set: ["PLAYER", "DM"] }
       }
     });
 
@@ -100,14 +104,16 @@ async function main() {
     const subscription = existing
       ? await prisma.userSubscription.update({
         where: { id: existing.id },
-        data: { status: "ACTIVE", expiresAt: null }
+        data: { status: "ACTIVE", source: "FOUNDER", currentPeriodEnd: null, expiresAt: null }
       })
       : await prisma.userSubscription.create({
         data: {
           userId: user.id,
           planId: founderPlan.id,
           status: "ACTIVE",
+          source: "FOUNDER",
           startedAt: now,
+          currentPeriodEnd: null,
           expiresAt: null
         }
       });
@@ -126,7 +132,8 @@ async function main() {
       }
     });
 
-    console.log(`Updated founder account: ${user.username}`);
+    console.log(`Updated founder account: ${user.email} / @${user.username}`);
+    console.log(`  founder=true emailVerified=true subscription=FOUNDER status=${subscription.status}`);
   }
 
   console.log("Founder seed complete.");
