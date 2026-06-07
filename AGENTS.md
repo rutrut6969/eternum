@@ -32,6 +32,8 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Never rely only on frontend authorization.
 - DM-only actions require server-side campaign membership checks.
 - Character-owned gameplay data must stay tied to `Character` records.
+- Character creation is classless/archetype-based. Do not make traditional D&D class a required core identity; use training focus, professions, disciplines, and attributes instead.
+- Currency math must use copper pieces as the internal base unit. UI can display CP/SP/EP/GP/PP, but services and audits should store copper totals.
 - User account data must stay separate from character, campaign, and session gameplay data.
 - AI can suggest content, but the rules engine owns all mechanical numbers.
 - DM approval is required before AI or homebrew content becomes usable in a campaign.
@@ -45,6 +47,7 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Hybrid map workflows are expected: AI drafts structure, the DM edits manually, uploaded images can act as reference/base visuals, and publication still follows approval rules.
 - The unified assistant is a routing and drafting layer. It can store threads, messages, and workflow drafts, but it must not directly make content campaign-usable.
 - Assistant-created spells, items, NPCs, monsters, maps, quests, compendiums, and rules suggestions must still flow through validation, rules-engine calculation where relevant, and DM approval.
+- SRD/Open5e content must remain visibly separate from homebrew and must be limited to SRD/Creative Commons/Open5e-compatible source data. Do not import proprietary non-SRD WOTC content.
 
 ## UI Rules
 
@@ -75,6 +78,8 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - VTT map foundation
 - Editable map builder and AI blueprint workflow
 - Unified assistant workflow foundation
+- Classless character creator and SRD data integration
+- Character wallets, party treasury, and currency audit foundation
 - Activity feeds and timelines
 - Future Square subscriptions
 - Future Discord integration

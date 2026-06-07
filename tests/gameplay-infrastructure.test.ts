@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createEmailVerificationToken, isVerificationTokenExpired } from "@/lib/auth/email-verification";
 import { usernameFromDisplayName, validateUsername } from "@/lib/auth/validation";
 import { assistantSystemPrompt, classifyAssistantIntent } from "@/lib/assistant/intents";
+import { formatCurrency, fromCopper, splitCopper, toCopper } from "@/lib/currency/conversion";
 import { getInviteStatus } from "@/lib/invites";
 import { blueprintToMapLayers, createBlankMapBlueprint, validateMapBlueprint } from "@/lib/maps/blueprint-schema";
 import { buildEditableMapBlueprintPrompt, buildTopDownBattleMapPrompt } from "@/lib/maps/prompt-templates";
@@ -160,6 +161,10 @@ describe("unified assistant routing", () => {
     expect(classifyAssistantIntent("Help me make a shadow spell").type).toBe("SPELL_DRAFT");
     expect(classifyAssistantIntent("Create an NPC merchant with secrets").type).toBe("NPC_DRAFT");
     expect(classifyAssistantIntent("Build a ruined crypt map").type).toBe("MAP_BLUEPRINT");
+    expect(classifyAssistantIntent("Split the gold among the party").type).toBe("CURRENCY_HELP");
+    expect(classifyAssistantIntent("Kaelen claims the loot").type).toBe("LOOT_UPDATE");
+    expect(classifyAssistantIntent("Start listening to this session").type).toBe("SESSION_LISTENER");
+    expect(classifyAssistantIntent("What happened last session?").type).toBe("SESSION_MEMORY");
     expect(classifyAssistantIntent("Explain stamina recovery").type).toBe("RULE_EXPLANATION");
   });
 
@@ -169,5 +174,17 @@ describe("unified assistant routing", () => {
     expect(prompt).toContain("Rules Engine Calculation");
     expect(prompt).toContain("AI never finalizes mechanics");
     expect(prompt).toContain("strict JSON");
+  });
+});
+
+describe("currency conversion", () => {
+  it("uses copper as the base unit", () => {
+    expect(toCopper({ pp: 1, gp: 2, ep: 1, sp: 3, cp: 4 })).toBe(1284);
+    expect(fromCopper(1284)).toEqual({ pp: 1, gp: 2, ep: 1, sp: 3, cp: 4 });
+    expect(formatCurrency(1284)).toBe("1 PP 2 GP 1 EP 3 SP 4 CP");
+  });
+
+  it("splits currency with an explicit remainder", () => {
+    expect(splitCopper(101, 4)).toEqual({ share: 25, remainder: 1 });
   });
 });

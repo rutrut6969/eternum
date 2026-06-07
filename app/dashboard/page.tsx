@@ -12,7 +12,7 @@ import { subscriptionService } from "@/lib/subscriptions/service";
 
 const baseQuickActions = [
   { href: "/dashboard", label: "Join campaign", tone: "mana" },
-  { href: "/dashboard/characters", label: "Create character", tone: "mana" },
+  { href: "/dashboard/characters/new", label: "Create character", tone: "mana" },
   { href: "/dashboard/homebrew/spells/new", label: "Create homebrew spell", tone: "violet" },
   { href: "/dashboard/homebrew/items/new", label: "Create homebrew item", tone: "violet" },
   { href: "#dice", label: "Open dice roller", tone: "crimson" },

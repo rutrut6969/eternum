@@ -42,6 +42,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Campaign invite landing page at `/invite/[token]` with campaign preview, DM name, role offer, auth return links, and expired/used/invalid states.
 - DM-only campaign member role editor with multi-role support and final-DM safety protection.
 - Character creation foundation tied to campaigns, with gameplay data fields for inventory, learned spells, custom spells, crafted items, professions, magical disciplines, traits, flaws, affinities, tamed creatures, undead servants, and dice rolls.
+- Guided classless character creator at `/dashboard/characters/new` with labeled wizard steps for identity, SRD/Open5e species, backstory, attributes, training focus, review, and starting wallet.
+- Reusable form UI components for labeled fields, helper text, errors, sections, checkboxes, and submit bars.
 - Mobile-friendly character sheet shell with mana/stamina calculations and gameplay data counters.
 - AI backstory suggestions now persist into `BackstoryAnalysis` as pending DM review.
 - DM backstory approval route and UI can approve, reject, or request edits. Approved suggestions apply profession levels, traits, flaws, magical affinities, and starting inventory.
@@ -50,6 +52,9 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Character gameplay editors for inventory, learned spells, custom spells, crafted items, profession progress, magical disciplines, traits, flaws, affinities, tamed creatures, and undead servants.
 - Inventory items can be added to character-owned inventory with name, type, rarity, quantity, description, equipped state, image URL, and source.
 - SRD spell search endpoint converts Open5e spell data into Eternum spell cards with tier, mana cost, casting time, range, duration, save/attack text, and infusion options.
+- SRD/Open5e species service and API routes for species lists/details plus generic SRD entries.
+- Public Library now separates approved public homebrew from SRD/Open5e-compatible reference content and labels SRD sources.
+- Currency wallet foundation with copper-based conversion helpers, character wallets, party treasuries, transaction audit records, transfer/split APIs, and wallet display cards.
 - Basic learn/remove spell flows through character-owned learned spell data.
 - Custom spell AI route now persists generated suggestions as draft/pending homebrew with rules-engine mana/tier/concentration/infusion metadata.
 - Homebrew item builder supports manual and AI-assisted item drafts with rarity, stats/body, crafting/profession requirements, attunement, balance notes, image prompt, image alt text, and generated-by-AI metadata.
@@ -103,6 +108,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - OpenAI integration helpers and API routes for backstory and custom spell suggestions.
 - Unified assistant foundation with persistent dashboard launcher, assistant workspace, thread/message/workflow models, intent routing, stored structured payloads, and workflow status updates.
 - Assistant routing currently recognizes character help, spell drafts, item drafts, NPC drafts, monster drafts, quest drafts, rule explanations, compendium help, and map blueprint requests.
+- Assistant routing now also recognizes currency, loot update, session listener, and session memory requests as draft workflows.
 - Open5e SRD integration helper for public D&D-compatible spell data.
 - Vercel-ready project scripts and environment variable template.
 
@@ -110,7 +116,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 
 - Campaign CRUD is usable, but per-campaign detail pages, richer settings controls, and true hard-delete workflows are still planned.
 - Invite flow has landing pages and token acceptance, but email delivery for invites is still planned.
-- Character creation stores core identity and gameplay containers, but detailed inventory, spell, crafting, discipline, tamed creature, and undead servant editors are still planned.
+- Character creation stores classless identity, SRD species references, training focus, gameplay containers, and wallet records, but richer portrait upload, guided backstory analysis handoff, skill training, research, and archetype progression are still planned.
 - AI backstory approval applies common JSON fields, but suggestion shape validation and a more guided DM diff/preview UI are still planned.
 - Dice rolls are filtered by campaign visibility, but real-time updates, advanced roll expressions, and per-roll audit views are still planned.
 - Email verification is required for campaign creation and public publishing, but not yet required for every account action.
@@ -126,6 +132,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Subscription models, feature gates, pricing page, and AI usage tracking exist, but Square checkout, webhooks, billing portal, invoices, and plan enforcement are intentionally not implemented.
 - Homebrew spell/item builder routes are usable entry points, but rich field-level spell/item editors and post-save image-upload handoff are still basic.
 - Unified assistant stores structured drafts and workflow state, but it does not yet convert assistant workflows directly into saved homebrew, characters, NPCs, monsters, quests, or DM review submissions.
+- Currency wallets and transfers are implemented, but loot event detection, pending inventory updates, manual loot queues, and auto-approval settings are still planned.
+- SRD data currently uses live Open5e fetches plus cache schema foundation; import/refresh scripts and normalized high-volume SRD tables are still planned.
 - Dashboard navigation is functional and mobile-friendly, but active-route highlighting and richer notification detail views are still planned.
 - Account settings display user data, but editable profile fields and linked account management are still placeholders.
 - DM-only mobile drawer links route to the current dashboard/campaign workspaces until dedicated per-tool landing pages exist.
@@ -158,6 +166,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - AI map blueprints require `OPENAI_API_KEY` and a plan that passes `canUseFutureMapGeneration()`.
 - Unified assistant messages require `OPENAI_API_KEY` and currently use the existing advanced AI feature gate.
 - Assistant workflows are persisted as drafts, but submit-to-review/save-to-content actions are still future implementation work.
+- Wallet transfers require enough character balance and currently operate through API foundations; richer transfer/split UI and party treasury management screens are still planned.
 
 ## Next Recommended Steps
 
@@ -302,7 +311,7 @@ npm run prisma:deploy
 
 Production should use a managed PostgreSQL database such as Neon, Supabase, Render, Railway, or Vercel Postgres.
 
-Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, `AIUsage`, `User.isFounder`, `User.founderSince`, `Map.sourceType`, `Map.blueprintVersion`, `Map.editorState`, `AssistantThread`, `AssistantMessage`, and `AssistantWorkflow`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, founder access, AI usage tracking, editable map builder features, or unified assistant features locally.
+Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, `AIUsage`, `User.isFounder`, `User.founderSince`, `Map.sourceType`, `Map.blueprintVersion`, `Map.editorState`, `AssistantThread`, `AssistantMessage`, `AssistantWorkflow`, `SrdSource`, `SrdEntry`, `CharacterWallet`, `PartyTreasury`, and `CurrencyTransaction`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, founder access, AI usage tracking, editable map builder features, unified assistant features, SRD cache features, or currency wallets locally.
 
 ## Deployment
 
@@ -365,6 +374,9 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Campaign member role editing
 - [x] Final DM role safety protection
 - [x] Character creation foundation
+- [x] Guided classless character creator route
+- [x] SRD/Open5e species API foundation
+- [x] Public library SRD/Open5e source section
 - [x] Character gameplay data containers
 - [x] Character gameplay editors
 - [x] Inventory item editor foundation
@@ -412,6 +424,10 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Persistent dashboard assistant launcher
 - [x] Assistant workspace route
 - [x] Assistant intent routing and workflow draft persistence
+- [x] Currency conversion helpers
+- [x] Character wallet schema and display cards
+- [x] Party treasury and currency transaction schema foundation
+- [x] Currency transfer and split API foundations
 - [x] True campaign dashboard route
 - [x] Campaign gameplay loop dashboard polish
 - [x] Maps foundation UI polish
@@ -450,6 +466,12 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Assistant workflow conversion into saved homebrew/character/map records
 - [ ] Assistant submit-to-DM-review controls
 - [ ] Assistant campaign memory retrieval
+- [ ] Loot event and pending inventory update queue
+- [ ] Character creator portrait upload and richer SRD trait application
+- [ ] SRD cache import/refresh scripts
+- [ ] Party treasury management UI
+- [ ] Currency transfer/split UI
+- [ ] Crafted item pricing engine
 - [ ] Rich map editor drag handles, snap controls, and layer reordering
 - [ ] AI map image generation and Blob save pipeline
 - [ ] Campaign UI for public map clone/import
@@ -464,6 +486,11 @@ Do not run deployment watch commands until the Vercel project is linked.
 ### Planned
 
 - [ ] Session notes editor
+- [ ] Session transcript import/listener foundation
+- [ ] Speaker assignment and voice profile foundation
+- [ ] NPC profile and roleplay mode
+- [ ] Monster creator and statblock balancing
+- [ ] Campaign memory summaries and retrieval
 - [ ] Square checkout
 - [ ] Square webhooks
 - [ ] Subscription billing portal

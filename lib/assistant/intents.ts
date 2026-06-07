@@ -16,6 +16,10 @@ const intents: AssistantIntent[] = [
   { type: "QUEST_DRAFT", label: "Quest draft", currentStep: "quest_intake", targetType: "quest" },
   { type: "COMPENDIUM_HELP", label: "Compendium help", currentStep: "compendium_intake", targetType: "compendium" },
   { type: "MAP_BLUEPRINT", label: "Map blueprint", currentStep: "map_intake", targetType: "map" },
+  { type: "CURRENCY_HELP", label: "Currency help", currentStep: "currency_intake", targetType: "currency" },
+  { type: "LOOT_UPDATE", label: "Loot update", currentStep: "loot_intake", targetType: "pending_loot" },
+  { type: "SESSION_LISTENER", label: "Session listener", currentStep: "listener_intake", targetType: "session_listener" },
+  { type: "SESSION_MEMORY", label: "Session memory", currentStep: "memory_intake", targetType: "campaign_memory" },
   { type: "RULE_EXPLANATION", label: "Rule explanation", currentStep: "rule_explanation", targetType: "rules" }
 ];
 
@@ -29,7 +33,11 @@ export function classifyAssistantIntent(message: string): AssistantIntent {
   if (/\b(quest|hook|objective|adventure|mission|rumor)\b/.test(text)) return intents[5];
   if (/\b(compendium|ruleset|module|pack|lore entry)\b/.test(text)) return intents[6];
   if (/\b(map|dungeon|crypt|battlemap|battle map|room|corridor)\b/.test(text)) return intents[7];
-  if (/\b(rule|explain|how does|mana|stamina|profession xp|necromancy)\b/.test(text)) return intents[8];
+  if (/\b(currency|wallet|gold|silver|copper|electrum|platinum|treasury|split the gold|transfer)\b/.test(text)) return intents[8];
+  if (/\b(loot|take everything|claim|found a dagger|treasure)\b/.test(text)) return intents[9];
+  if (/\b(start listening|session listener|transcribe|transcript|speaker)\b/.test(text)) return intents[10];
+  if (/\b(session summary|campaign memory|what happened last session|recap|remember)\b/.test(text)) return intents[11];
+  if (/\b(rule|explain|how does|mana|stamina|profession xp|necromancy)\b/.test(text)) return intents[12];
   return { type: "GENERAL", label: "General assistant", currentStep: "intake" };
 }
 
@@ -51,6 +59,6 @@ AI never finalizes mechanics, balance, legality, prices, mana costs, DCs, XP, or
 Use original Eternum content only. Do not import proprietary non-SRD copyrighted material.
 For NPC and monster requests, provide a draft outline only; full NPC/monster workflow is coming next.
 For map requests, suggest an editable structured blueprint workflow, not a flat image.
+For loot, currency, listener, transcript, or memory requests, create pending workflow guidance only; never apply inventory, wallet, or memory changes directly.
 For rules explanations, be concise and mention when a DM can override.`;
 }
-

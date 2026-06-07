@@ -52,6 +52,19 @@ enum ContentType {
   MAGICAL_DISCIPLINE
 }
 
+enum SrdEntryType {
+  SPECIES
+  LANGUAGE
+  PROFICIENCY
+  TRAIT
+  EQUIPMENT
+  SPELL
+  MONSTER
+  CONDITION
+  RULE
+  ITEM
+}
+
 enum DiceVisibility {
   DM_ONLY
   ROLLER_AND_DM
@@ -111,6 +124,10 @@ enum AssistantWorkflowType {
   RULE_EXPLANATION
   COMPENDIUM_HELP
   MAP_BLUEPRINT
+  CURRENCY_HELP
+  LOOT_UPDATE
+  SESSION_LISTENER
+  SESSION_MEMORY
   GENERAL
 }
 
@@ -192,6 +209,24 @@ enum BillingEventType {
   MANUAL_ADJUSTMENT
 }
 
+enum CurrencyTransactionType {
+  TRANSFER
+  LOOT
+  SPLIT
+  MANUAL_ADJUSTMENT
+  CRAFTING_SALE
+  PURCHASE
+  TREASURY_DEPOSIT
+  TREASURY_WITHDRAWAL
+}
+
+enum CurrencyTransactionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  APPLIED
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -224,6 +259,7 @@ model User {
   mapsCreated    Map[] @relation("MapCreator")
   assistantThreads AssistantThread[]
   assistantMessages AssistantMessage[]
+  currencyTransactions CurrencyTransaction[] @relation("CurrencyTransactionActor")
   subscriptions   UserSubscription[]
   billingEvents   BillingEvent[]
   aiUsage         AIUsage[]
@@ -295,6 +331,40 @@ model AIUsage {
   @@unique([userId, month])
 }
 
+model SrdSource {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  version     String?
+  baseUrl     String?
+  license     String   @default("SRD / Creative Commons")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entries SrdEntry[]
+}
+
+model SrdEntry {
+  id           String       @id @default(cuid())
+  sourceId     String
+  type         SrdEntryType
+  slug         String
+  name         String
+  summary      String?
+  version      String?
+  licenseLabel String       @default("SRD / Creative Commons")
+  sourceUrl    String?
+  raw          Json         @default("{}")
+  normalized   Json         @default("{}")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  source SrdSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, type, slug])
+  @@index([type, name])
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -356,6 +426,8 @@ model Campaign {
   maps       Map[]
   combatEncounters CombatEncounter[]
   assistantThreads AssistantThread[]
+  partyTreasury PartyTreasury?
+  currencyTransactions CurrencyTransaction[]
 }
 
 model CampaignMember {
@@ -391,8 +463,14 @@ model Character {
   campaignId     String?
   ownerId        String
   name           String
+  displayTitle   String?
+  portraitUrl    String?
   ancestry       String?
+  speciesSlug    String?
+  speciesSource  String?
+  speciesTraits  Json            @default("[]")
   className      String?
+  trainingFocus  Json            @default("[]")
   level          Int             @default(1)
   castingAbility CastingAbility?
   strength       Int             @default(10)
@@ -426,6 +504,53 @@ model Character {
   mapTokens        MapToken[]
   initiativeEntries InitiativeEntry[]
   assistantThreads AssistantThread[]
+  wallet           CharacterWallet?
+  currencyTransactions CurrencyTransaction[]
+}
+
+model CharacterWallet {
+  id          String   @id @default(cuid())
+  characterId String  @unique
+  balanceCp   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+model PartyTreasury {
+  id         String   @id @default(cuid())
+  campaignId String  @unique
+  balanceCp  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  transactions CurrencyTransaction[]
+}
+
+model CurrencyTransaction {
+  id          String                    @id @default(cuid())
+  campaignId  String?
+  characterId String?
+  treasuryId  String?
+  actorId     String?
+  type        CurrencyTransactionType
+  status      CurrencyTransactionStatus @default(APPLIED)
+  amountCp    Int
+  note        String?
+  metadata    Json                      @default("{}")
+  createdAt   DateTime                  @default(now())
+  appliedAt   DateTime?
+
+  campaign  Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  character Character?     @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  treasury  PartyTreasury? @relation(fields: [treasuryId], references: [id], onDelete: SetNull)
+  actor     User?          @relation("CurrencyTransactionActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([characterId, createdAt])
+  @@index([campaignId, createdAt])
+  @@index([treasuryId, createdAt])
 }
 
 model ProfessionProgress {

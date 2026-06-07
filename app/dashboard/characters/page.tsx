@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import Link from "next/link";
 import { ResourceBars } from "@/components/resource-bars";
 import { BackstoryApprovalPanel } from "@/components/characters/backstory-approval-panel";
 import { CharacterWorkbench } from "@/components/characters/character-workbench";
@@ -7,6 +8,7 @@ import { MilestoneList } from "@/components/characters/milestone-list";
 import { HomebrewApprovalPanel } from "@/components/homebrew/homebrew-approval-panel";
 import { HomebrewBuilder } from "@/components/homebrew/homebrew-builder";
 import { HomebrewPortfolio } from "@/components/homebrew/homebrew-portfolio";
+import { WalletCard } from "@/components/currency/wallet-card";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { calculateMana, calculateStamina } from "@/lib/rules/resources";
@@ -24,7 +26,9 @@ export default async function CharactersPage() {
       campaign: { select: { name: true } },
       professionLevels: true,
       backstoryAnalyses: { orderBy: { createdAt: "desc" }, take: 3 },
-      milestones: { orderBy: { createdAt: "desc" }, take: 20 }
+      milestones: { orderBy: { createdAt: "desc" }, take: 20 },
+      wallet: true,
+      currencyTransactions: { orderBy: { createdAt: "desc" }, take: 5 }
     },
     orderBy: { updatedAt: "desc" }
   });
@@ -120,6 +124,11 @@ export default async function CharactersPage() {
       <Badge tone="mana">Character Builder</Badge>
       <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl">Character workspace</h1>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">Create campaign-owned characters and manage their inventory, spells, professions, disciplines, traits, and AI backstory approvals.</p>
+      <div className="mt-5 flex flex-wrap gap-3">
+        <Link className="inline-flex rounded-md bg-mana px-4 py-3 text-sm font-semibold text-void" href="/dashboard/characters/new">
+          Open guided creator
+        </Link>
+      </div>
       <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {characters.length === 0 ? (
           <Card>
@@ -151,6 +160,9 @@ export default async function CharactersPage() {
                 <span className="rounded bg-black/25 p-2">{character.professionLevels.length} profs</span>
                 <span className="rounded bg-black/25 p-2">{Array.isArray(character.learnedSpells) ? character.learnedSpells.length : 0} spells</span>
               </div>
+              <Link className="mt-3 block rounded-md border border-aureate/20 bg-aureate/10 p-2 text-sm font-semibold text-aureate hover:bg-aureate/15" href={`/dashboard/characters/${character.id}/wallet`}>
+                Wallet {character.wallet?.balanceCp ?? 0} CP
+              </Link>
               <div className="mt-4">
                 <ResourceBars mana={calculateMana(character.level, scores, character.castingAbility ?? "WIS")} stamina={calculateStamina(character.level, scores)} />
               </div>
@@ -161,6 +173,13 @@ export default async function CharactersPage() {
       <div className="mt-8">
         <CharacterWorkbench campaigns={campaignOptions} characters={characterSummaries} />
       </div>
+      {characters.length ? (
+        <div className="mt-8 grid gap-5 lg:grid-cols-2">
+          {characters.slice(0, 4).map((character) => (
+            <WalletCard key={character.id} characterName={character.name} balanceCp={character.wallet?.balanceCp ?? 0} transactions={character.currencyTransactions} />
+          ))}
+        </div>
+      ) : null}
       <div className="mt-8">
         <MilestoneList milestones={characterSummaries.flatMap((character) => character.milestones)} />
       </div>

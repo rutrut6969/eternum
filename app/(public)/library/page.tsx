@@ -2,6 +2,7 @@ import { ContentType, Prisma } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
+import { fetchSrdSpeciesOptions, type SrdSpeciesOption } from "@/lib/srd";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 type PublicLibraryItem = Prisma.HomebrewContentGetPayload<{
@@ -34,6 +35,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
   const profession = clean(valueOf(params.profession));
   const creator = clean(valueOf(params.creator));
   const campaign = clean(valueOf(params.campaign));
+  const source = clean(valueOf(params.source));
   const contentTypes = Object.values(ContentType);
   const safeType = type && contentTypes.includes(type as ContentType) ? (type as ContentType) : undefined;
 
@@ -46,7 +48,9 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
   };
 
   let items: PublicLibraryItem[] = [];
+  let srdSpecies: SrdSpeciesOption[] = [];
   let libraryError: string | null = null;
+  let srdError: string | null = null;
 
   try {
     items = await prisma.homebrewContent.findMany({
@@ -63,6 +67,15 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
     libraryError = "The public library could not be loaded right now. Please try again after the database is synced.";
   }
 
+  if (!source || source === "srd") {
+    try {
+      srdSpecies = await fetchSrdSpeciesOptions(query).then((entries) => entries.slice(0, 12));
+    } catch (error) {
+      console.error("SRD public library query failed", error);
+      srdError = "SRD/Open5e content could not be loaded right now.";
+    }
+  }
+
   const filtered = items
     .filter((item) => !query || textIncludes(item.title, query) || textIncludes(item.summary, query))
     .filter((item) => !profession || JSON.stringify(item.professionRequirements ?? []).toLowerCase().includes(profession.toLowerCase()))
@@ -75,11 +88,16 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
       <Badge tone="gold">Public Homebrew</Badge>
       <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl md:text-6xl">Library</h1>
       <p className="mt-5 max-w-3xl text-lg leading-8 text-zinc-300">
-        Browse DM-approved public spells, items, recipes, monsters, profession perks, and disciplines from Eternum tables.
+        Browse DM-approved public homebrew alongside free SRD/Open5e-compatible reference content. Proprietary non-SRD content is not imported or redistributed.
       </p>
 
       <form className="mt-8 grid gap-3 rounded-lg border border-white/10 bg-charcoal/70 p-4 sm:grid-cols-2 lg:grid-cols-4">
         <input className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="q" defaultValue={query ?? ""} placeholder="Name or description" />
+        <select className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="source" defaultValue={source ?? ""}>
+          <option value="">Homebrew + SRD</option>
+          <option value="homebrew">Homebrew only</option>
+          <option value="srd">SRD/Open5e only</option>
+        </select>
         <select className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="type" defaultValue={safeType ?? ""}>
           <option value="">All types</option>
           <option value="CUSTOM_SPELL">Spells</option>
@@ -97,6 +115,40 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
         <button className="whitespace-nowrap rounded-md bg-aureate px-4 py-3 font-semibold text-void" type="submit">Search</button>
       </form>
 
+      {srdError ? (
+        <div className="mt-8">
+          <Card>
+            <h2 className="text-xl font-bold text-white">SRD temporarily unavailable</h2>
+            <p className="mt-3 text-sm leading-6 text-zinc-300">{srdError}</p>
+          </Card>
+        </div>
+      ) : null}
+
+      {source !== "homebrew" && srdSpecies.length ? (
+        <section className="mt-10">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <Badge tone="mana">SRD / Open5e</Badge>
+              <h2 className="mt-3 text-2xl font-bold text-white">Species and ancestry references</h2>
+            </div>
+            <p className="text-sm text-zinc-500">Free SRD-compatible source data</p>
+          </div>
+          <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {srdSpecies.map((species) => (
+              <Card key={species.slug}>
+                <div className="flex flex-wrap gap-2">
+                  <Badge tone="mana">SRD / Creative Commons</Badge>
+                  {species.speed ? <Badge tone="gold">Speed {species.speed}</Badge> : null}
+                </div>
+                <h3 className="mt-5 text-2xl font-bold text-white">{species.name}</h3>
+                <p className="mt-3 text-sm leading-6 text-zinc-300">{species.description || "Open5e source reference."}</p>
+                <p className="mt-3 text-xs text-zinc-500">Traits: {species.traits.map((trait) => trait.name).join(", ") || "none listed"}</p>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {libraryError ? (
         <div className="mt-8">
           <Card>
@@ -106,8 +158,8 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
         </div>
       ) : null}
 
-      <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {!libraryError && filtered.length === 0 ? (
+      {source !== "srd" ? <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {!libraryError && filtered.length === 0 && srdSpecies.length === 0 ? (
           <Card>
             <h2 className="text-xl font-bold text-white">No public homebrew found</h2>
             <p className="mt-3 text-sm text-zinc-300">Approved public content will appear here after DM publication.</p>
@@ -129,7 +181,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
             </p>
           </Card>
         ))}
-      </div>
+      </div> : null}
     </main>
   );
 }
