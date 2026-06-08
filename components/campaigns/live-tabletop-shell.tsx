@@ -66,6 +66,7 @@ function layerElements(data: unknown): MapElement[] {
 
 function sourceBadge(sourceType: string) {
   if (sourceType === "UPLOAD") return "Uploaded";
+  if (sourceType === "DUNGEON_SCRAWL") return "Dungeon Scrawl";
   if (sourceType === "AI_BLUEPRINT") return "AI Blueprint";
   if (sourceType === "HYBRID") return "Hybrid";
   return "Manual";

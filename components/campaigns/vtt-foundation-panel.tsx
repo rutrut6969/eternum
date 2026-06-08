@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
@@ -36,6 +36,7 @@ type SessionOption = {
 
 function sourceLabel(sourceType?: string) {
   if (sourceType === "UPLOAD") return "Uploaded";
+  if (sourceType === "DUNGEON_SCRAWL") return "Dungeon Scrawl Imported";
   if (sourceType === "AI_BLUEPRINT") return "AI Blueprint";
   if (sourceType === "HYBRID") return "Hybrid";
   return "Manual";
@@ -43,6 +44,7 @@ function sourceLabel(sourceType?: string) {
 
 function sourceTone(sourceType?: string) {
   if (sourceType === "UPLOAD") return "stamina";
+  if (sourceType === "DUNGEON_SCRAWL") return "crimson";
   if (sourceType === "AI_BLUEPRINT") return "violet";
   if (sourceType === "HYBRID") return "mana";
   return "gold";
@@ -60,11 +62,22 @@ export function VttFoundationPanel({
   canManage: boolean;
 }) {
   const router = useRouter();
+  const importFormRef = useRef<HTMLFormElement | null>(null);
   const [name, setName] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
+  const [importStatus, setImportStatus] = useState("");
+  const [importPreview, setImportPreview] = useState<null | {
+    name: string;
+    sourceFileName: string;
+    importVersion?: string;
+    grid: { width: number; height: number; cellSize?: number };
+    summary: { rooms: number; walls: number; doors: number; corridors: number; layers: number; labels: number; unsupportedObjects: number };
+    warnings: string[];
+    successPercentage: number;
+  }>(null);
 
   async function createMap(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -109,6 +122,34 @@ export function VttFoundationPanel({
     setUploadStatus("Uploaded and set active.");
     setUploadPreview(null);
     setImageSize(null);
+    form.reset();
+    router.refresh();
+  }
+
+  async function importDungeonScrawl(event?: React.FormEvent<HTMLFormElement>, confirm = false) {
+    event?.preventDefault();
+    setImportStatus(confirm ? "Importing Dungeon Scrawl map..." : "Parsing Dungeon Scrawl project...");
+    const form = event?.currentTarget ?? importFormRef.current;
+    if (!form) {
+      setImportStatus("Import form is not ready.");
+      return;
+    }
+    const formData = new FormData(form);
+    if (confirm) formData.set("confirm", "true");
+    const response = await fetch(`/api/campaigns/${campaignId}/maps/import/dungeon-scrawl`, { method: "POST", body: formData });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setImportStatus(body.error || "Could not import Dungeon Scrawl project.");
+      return;
+    }
+    if (!confirm) {
+      setImportPreview(body.preview);
+      setImportStatus("Import preview ready. Review warnings, then confirm import.");
+      return;
+    }
+    await setActiveMap(body.map.id, false);
+    setImportPreview(null);
+    setImportStatus("Dungeon Scrawl map imported and set active.");
     form.reset();
     router.refresh();
   }
@@ -181,6 +222,60 @@ export function VttFoundationPanel({
             <button className="mt-3 rounded-md border border-mana/40 px-4 py-3 font-semibold text-mana hover:bg-mana/10" type="submit">Upload and set active</button>
           </form>
           {uploadStatus ? <p className="rounded-md border border-white/10 bg-black/25 p-3 text-sm text-zinc-200">{uploadStatus}</p> : null}
+
+          <form ref={importFormRef} className="rounded-lg border border-crimson/20 bg-crimson/5 p-3" onSubmit={(event) => importDungeonScrawl(event, false)}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-bold text-white">Import Dungeon Scrawl project</p>
+                <p className="mt-1 text-xs leading-5 text-zinc-400">Upload a `.ds` project to convert rooms, walls, doors, labels, and layers into editable Eternum map data where possible.</p>
+              </div>
+              <Badge tone="crimson">editable import</Badge>
+            </div>
+            <div className="mt-3 grid gap-2 lg:grid-cols-[1fr_1fr_0.8fr]">
+              <input className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="name" placeholder="Imported map name, optional" />
+              <input className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-sm text-white" name="file" type="file" accept=".ds,application/json,text/plain" required />
+              <select className="min-w-0 rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" name="sessionId" defaultValue="">
+                <option value="">Campaign map</option>
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.id}>{session.title}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button className="rounded-md border border-crimson/40 px-4 py-3 font-semibold text-crimson hover:bg-crimson/10" type="submit">Preview import</button>
+              {importPreview ? (
+                <button className="rounded-md bg-crimson px-4 py-3 font-semibold text-white" onClick={() => importDungeonScrawl(undefined, true)} type="button">
+                  Confirm import
+                </button>
+              ) : null}
+            </div>
+            {importPreview ? (
+              <div className="mt-3 rounded-md border border-white/10 bg-black/25 p-3">
+                <div className="flex flex-wrap gap-2">
+                  <Badge tone="crimson">Dungeon Scrawl Imported</Badge>
+                  <Badge tone="gold">{importPreview.successPercentage}% converted</Badge>
+                  <Badge tone="mana">{importPreview.grid.width} x {importPreview.grid.height}</Badge>
+                </div>
+                <h3 className="mt-3 font-bold text-white">{importPreview.name}</h3>
+                <p className="mt-1 text-xs text-zinc-500">{importPreview.sourceFileName}{importPreview.importVersion ? ` / Version ${importPreview.importVersion}` : ""}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-300 sm:grid-cols-3 lg:grid-cols-6">
+                  <span className="rounded bg-black/30 p-2">Rooms: {importPreview.summary.rooms}</span>
+                  <span className="rounded bg-black/30 p-2">Walls: {importPreview.summary.walls}</span>
+                  <span className="rounded bg-black/30 p-2">Doors: {importPreview.summary.doors}</span>
+                  <span className="rounded bg-black/30 p-2">Corridors: {importPreview.summary.corridors}</span>
+                  <span className="rounded bg-black/30 p-2">Layers: {importPreview.summary.layers}</span>
+                  <span className="rounded bg-black/30 p-2">Labels: {importPreview.summary.labels}</span>
+                </div>
+                {importPreview.summary.unsupportedObjects ? <p className="mt-3 text-sm text-aureate">Unsupported objects: {importPreview.summary.unsupportedObjects}</p> : null}
+                {importPreview.warnings.length ? (
+                  <ul className="mt-3 grid gap-1 text-xs text-zinc-400">
+                    {importPreview.warnings.slice(0, 6).map((warning) => <li key={warning}>- {warning}</li>)}
+                  </ul>
+                ) : <p className="mt-3 text-sm text-stamina">No import warnings.</p>}
+              </div>
+            ) : null}
+          </form>
+          {importStatus ? <p className="rounded-md border border-white/10 bg-black/25 p-3 text-sm text-zinc-200">{importStatus}</p> : null}
         </div>
       ) : null}
 

@@ -101,6 +101,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Member role editing, invite creation/copy links, and campaign settings now live inside the dedicated campaign workspace instead of the campaign launcher.
 - VTT campaign panel now displays map images, descriptions, tags, grid/status badges, AI-image badges, visible empty states, and lets DMs attach new map records to either the campaign or a specific session.
 - Campaign map library now supports uploaded battlemap images through Vercel Blob, with `sourceType: UPLOAD`, campaign-only visibility, thumbnail previews, image dimensions, grid type, grid width/height, pixels-per-cell, grid offset, uploader attribution, Set Active actions, and Edit Alignment links.
+- Campaign map library now supports Dungeon Scrawl `.ds` project imports through an adapter-style importer, with preview counts for rooms, walls, doors, corridors, layers, labels, unsupported objects, import warnings, and confirm-to-save behavior.
+- Dungeon Scrawl imports are converted into native editable Eternum `MapLayer.data` where possible, saved as `sourceType: DUNGEON_SCRAWL`, labeled distinctly in map cards, and remain usable in Play Campaign with active-map state, tokens, and fog foundations.
 - `/dashboard/campaigns/[campaignId]/play` now opens a full-screen live tabletop shell instead of a dashboard card page, with active map canvas, map selector, uploaded image rendering, structured map rendering fallback, token placement/movement, manual fog toggle/reveal foundation, dice roller, activity feed, party panel, and polling-based live-state refresh.
 - Campaign live play state now persists in `CampaignLiveState`, including active map, active session, fog enabled state, grid enabled state, current round, and future turn metadata.
 - Manual fog-of-war foundation now persists per campaign/map through `MapFogState` with enabled state and simple revealed/hidden region JSON.
@@ -155,6 +157,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Activity feed is persisted and displayed, but realtime delivery is still only an abstraction.
 - Campaign play mode now exposes a full-screen active tabletop shell with uploaded maps, active map state, token placement/movement, manual fog foundation, dice, party list, and activity polling, but combat automation, player view preview, handout reveal controls, rich initiative tools, and advanced encounter UI are still planned.
 - VTT data models, uploaded image maps, full-screen play shell, and a full-screen editable map renderer exist, but rich furniture asset libraries, token automation, dynamic lighting, realtime provider integration, player view separation, and combat UI are intentionally not implemented.
+- Dungeon Scrawl `.ds` import converts common JSON/project shapes for rooms, walls, doors, corridors, labels, and layers, but Dungeon Scrawl-specific advanced visuals, custom textures, and exact rendering parity are not guaranteed in v1.
 - AI map generation is blueprint-first: structured JSON generation and validation exist, but OpenAI image generation and generated Blob upload pipelines are intentionally not wired yet.
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
 - Subscription models, feature gates, pricing page, Square checkout, Founder lifetime checkout, donation checkout, webhook foundation, and AI usage tracking exist, but full Square subscription lifecycle sync, billing portal, invoices, refunds, and customer self-service are still partial.
@@ -196,6 +199,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Assistant/NPC/listener/loot/handout/pricing schema changes require `npm run db:push` on development databases.
 - Editable map builder schema changes require `npm run db:push` to add `MapSourceType`, `Map.blueprintVersion`, and `Map.editorState`.
 - Uploaded map/live tabletop schema changes require `npm run db:push` to add `CampaignLiveState`, `MapFogState`, and expanded `MapToken` fields.
+- Dungeon Scrawl import schema changes require `npm run db:push` to add `MapSourceType.DUNGEON_SCRAWL` and import metadata fields.
 - Subscription/billing schema changes require `npm run db:push` on development databases.
 - Square checkout and webhook foundations are implemented, but production Square configuration, subscription catalog mapping, refunds, invoices, and customer portal management still need operational setup.
 - `npm run seed:founders` is update-only and safe for passwords/data. It must be run against the database where the target user already exists.
@@ -509,6 +513,8 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] VTT foundation schema for maps, layers, tokens, encounters, and initiative
 - [x] VTT placeholder API and campaign dashboard panel
 - [x] Uploaded map image import for campaign map libraries
+- [x] Dungeon Scrawl `.ds` import preview and conversion foundation
+- [x] Adapter-style map importer architecture foundation
 - [x] Campaign active map live-state model and API
 - [x] Full-screen Play Campaign tabletop shell
 - [x] Uploaded image maps rendered in Play Campaign
@@ -603,6 +609,7 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Party treasury management UI
 - [ ] Currency transfer/split UI
 - [ ] Rich map editor snap controls, asset palettes, export, and advanced layer tooling
+- [ ] Rich Dungeon Scrawl import diff/preview rendering and advanced feature conversion
 - [ ] AI map image generation and Blob save pipeline
 - [ ] Campaign UI for public map clone/import
 - [ ] Square production credential setup and live checkout verification

@@ -187,6 +187,7 @@ enum MapSourceType {
   AI_BLUEPRINT
   UPLOAD
   HYBRID
+  DUNGEON_SCRAWL
 }
 
 enum SubscriptionPlanCode {
@@ -1169,6 +1170,11 @@ model Map {
   environment           String?
   theme                 String?
   prompt                String?           @db.Text
+  sourceFileName        String?
+  importWarnings        Json              @default("[]")
+  importVersion         String?
+  importedAt            DateTime?
+  importedByUserId      String?
   interactiveNotes      String?           @db.Text
   spawnPoints           Json              @default("[]")
   lightingNotes         String?           @db.Text

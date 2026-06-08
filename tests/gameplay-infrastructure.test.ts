@@ -8,6 +8,7 @@ import crypto from "node:crypto";
 import { getInviteStatus } from "@/lib/invites";
 import { homebrewSubmissionSnapshot } from "@/lib/homebrew-submissions";
 import { blueprintToMapLayers, createBlankMapBlueprint, validateMapBlueprint } from "@/lib/maps/blueprint-schema";
+import { dungeonScrawlImporter } from "@/lib/maps/importers/dungeon-scrawl";
 import { buildEditableMapBlueprintPrompt, buildTopDownBattleMapPrompt } from "@/lib/maps/prompt-templates";
 import { wouldRemoveFinalDm } from "@/lib/member-roles";
 import { milestoneForGameplayChange, professionMilestone } from "@/lib/milestones";
@@ -158,6 +159,41 @@ describe("editable map blueprints", () => {
 
     expect(layers[0].data.elements).toEqual([]);
     expect(editorState).toMatchObject({ selectedTool: "select", showGrid: true });
+  });
+});
+
+describe("Dungeon Scrawl import", () => {
+  it("converts recognizable Dungeon Scrawl project objects into editable map layers", () => {
+    const imported = dungeonScrawlImporter.parse({
+      fileName: "goblin-crypt.ds",
+      text: JSON.stringify({
+        version: "v1-test",
+        name: "Goblin Crypt",
+        grid: { width: 24, height: 18, cellSize: 70 },
+        layers: [
+          {
+            name: "Dungeon",
+            objects: [
+              { type: "room", x: 2, y: 2, width: 6, height: 4, name: "Entry" },
+              { type: "wall", x1: 2, y1: 2, x2: 8, y2: 2 },
+              { type: "door", x: 5, y: 6, rotation: 90 },
+              { type: "label", x: 3, y: 3, text: "Crypt" },
+              { type: "custom-texture", name: "Unsupported texture" }
+            ]
+          }
+        ]
+      })
+    });
+
+    expect(imported.sourceType).toBe("DUNGEON_SCRAWL");
+    expect(imported.summary).toMatchObject({ rooms: 1, walls: 1, doors: 1, labels: 1, unsupportedObjects: 1 });
+    expect(imported.blueprint.layers[0].elements.map((element) => element.type)).toEqual(["room", "wall", "door", "label"]);
+    expect(imported.warnings[0]).toContain("Unsupported Dungeon Scrawl object");
+    expect(validateMapBlueprint(imported.blueprint).valid).toBe(true);
+  });
+
+  it("rejects non-json Dungeon Scrawl files with a friendly parse error", () => {
+    expect(() => dungeonScrawlImporter.parse({ fileName: "broken.ds", text: "not json" })).toThrow("Could not parse Dungeon Scrawl project JSON");
   });
 });
 

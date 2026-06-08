@@ -4,6 +4,22 @@ import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
+function sourceLabel(sourceType: string) {
+  if (sourceType === "UPLOAD") return "Uploaded";
+  if (sourceType === "DUNGEON_SCRAWL") return "Dungeon Scrawl";
+  if (sourceType === "AI_BLUEPRINT") return "AI Blueprint";
+  if (sourceType === "HYBRID") return "Hybrid";
+  return "Manual";
+}
+
+function sourceTone(sourceType: string): "gold" | "mana" | "violet" | "stamina" | "crimson" {
+  if (sourceType === "UPLOAD") return "stamina";
+  if (sourceType === "DUNGEON_SCRAWL") return "crimson";
+  if (sourceType === "AI_BLUEPRINT") return "violet";
+  if (sourceType === "HYBRID") return "mana";
+  return "gold";
+}
+
 export default async function DashboardMapsPage() {
   const user = await requireUser();
   const maps = await prisma.map.findMany({
@@ -76,6 +92,7 @@ export default async function DashboardMapsPage() {
             <Card key={map.id}>
               <div className="flex flex-wrap gap-2">
                 <Badge tone="mana">{map.gridType.toLowerCase()} grid</Badge>
+                <Badge tone={sourceTone(map.sourceType)}>{sourceLabel(map.sourceType)}</Badge>
                 <Badge tone="gold">{map.gridWidth} x {map.gridHeight}</Badge>
                 <Badge tone={map.approvalStatus === "APPROVED_PUBLIC" ? "stamina" : "violet"}>{map.approvalStatus.replace(/_/g, " ")}</Badge>
               </div>
