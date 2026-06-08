@@ -102,10 +102,10 @@ export function DiceRoller({ campaigns, characters }: { campaigns: CampaignOptio
           <h2 className="text-2xl font-bold text-white">Campaign rolls</h2>
           <Badge tone={isDm ? "gold" : "mana"}>{isDm ? "DM view" : "Player view"}</Badge>
         </div>
-        <div className="mt-5 grid gap-3">
+        <div className="mt-5 max-h-[28rem] overflow-y-auto pr-1">
           {rolls.length === 0 ? <p className="text-sm text-zinc-300">No visible rolls yet.</p> : null}
           {rolls.map((roll) => (
-            <div key={roll.id} className="rounded-md border border-white/10 bg-black/25 p-4">
+            <div key={roll.id} className="mb-3 rounded-md border border-white/10 bg-black/25 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-lg font-bold text-white">{roll.label || roll.expression}</p>

@@ -116,18 +116,23 @@ enum AssistantMessageRole {
 
 enum AssistantWorkflowType {
   CHARACTER_HELP
+  BACKSTORY_ANALYSIS
   SPELL_DRAFT
   ITEM_DRAFT
   NPC_DRAFT
+  NPC_ROLEPLAY
   MONSTER_DRAFT
   QUEST_DRAFT
+  WORLDBUILDING
   RULE_EXPLANATION
   COMPENDIUM_HELP
   MAP_BLUEPRINT
+  CRAFTING_HELP
   CURRENCY_HELP
   LOOT_UPDATE
   SESSION_LISTENER
   SESSION_MEMORY
+  CAMPAIGN_MEMORY_QUERY
   GENERAL
 }
 
@@ -242,6 +247,37 @@ enum PurchaseStatus {
   FAILED
   CANCELED
   REFUNDED
+}
+
+enum TranscriptIntent {
+  DM_NARRATION
+  PLAYER_ACTION
+  LOOT_FOUND
+  LOOT_CLAIMED
+  NPC_DIALOGUE
+  COMBAT_ACTION
+  RULES_QUESTION
+  QUEST_UPDATE
+  NOTEWORTHY_EVENT
+  TABLE_CHATTER
+  UNKNOWN
+}
+
+enum PendingUpdateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  NEEDS_CHANGES
+  APPLIED
+  ARCHIVED
+}
+
+enum HandoutVisibility {
+  DM_ONLY
+  REVEALED_ALL
+  SELECTED_PLAYERS
+  SELECTED_CHARACTERS
+  HIDDEN
 }
 
 enum CurrencyTransactionType {
@@ -779,6 +815,191 @@ model AssistantWorkflow {
 
   @@index([threadId, status])
   @@index([type, status])
+}
+
+model Npc {
+  id                   String   @id @default(cuid())
+  campaignId           String?
+  createdById          String
+  name                 String
+  appearance           String?  @db.Text
+  personality          String?  @db.Text
+  voiceMannerisms      String?  @db.Text
+  goals                Json     @default("[]")
+  secrets              Json     @default("[]")
+  knowledge            Json     @default("{}")
+  faction              String?
+  relationships        Json     @default("[]")
+  emotionalState       String?
+  hiddenDmInstructions String?  @db.Text
+  roleplayEnabled      Boolean  @default(false)
+  autoSendLowRisk      Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  memories      NpcMemory[]
+  conversations NpcConversation[]
+
+  @@index([campaignId, name])
+  @@index([createdById, updatedAt])
+}
+
+model NpcMemory {
+  id        String   @id @default(cuid())
+  npcId     String
+  scope     String   @default("campaign")
+  content   String   @db.Text
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  npc Npc @relation(fields: [npcId], references: [id], onDelete: Cascade)
+
+  @@index([npcId, createdAt])
+}
+
+model NpcConversation {
+  id         String   @id @default(cuid())
+  npcId      String
+  campaignId String?
+  sessionId  String?
+  status     String   @default("active")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  npc      Npc          @relation(fields: [npcId], references: [id], onDelete: Cascade)
+  messages NpcMessage[]
+
+  @@index([campaignId, updatedAt])
+  @@index([npcId, updatedAt])
+}
+
+model NpcMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  speakerType    String
+  speakerUserId  String?
+  speakerCharacterId String?
+  content        String   @db.Text
+  approvedByDm   Boolean  @default(false)
+  hiddenFromPlayers Boolean @default(false)
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  conversation NpcConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model TranscriptSegment {
+  id                 String           @id @default(cuid())
+  sessionId          String
+  speakerUserId      String?
+  speakerCharacterId String?
+  isDm               Boolean          @default(false)
+  confidence         Float            @default(0)
+  rawText            String           @db.Text
+  correctedText      String?          @db.Text
+  timestamp          DateTime         @default(now())
+  intent             TranscriptIntent @default(UNKNOWN)
+  metadata           Json             @default("{}")
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([sessionId, timestamp])
+  @@index([intent])
+}
+
+model VoiceProfile {
+  id             String   @id @default(cuid())
+  userId         String?
+  characterId    String?
+  npcId          String?
+  provider       String   @default("none")
+  providerVoiceId String?
+  displayName    String
+  sampleMetadata Json     @default("{}")
+  consentRecordedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([characterId])
+  @@index([npcId])
+}
+
+model LootEvent {
+  id          String              @id @default(cuid())
+  campaignId  String
+  sessionId   String?
+  createdById String?
+  source      String              @default("manual")
+  description String              @db.Text
+  currencyCopper Int              @default(0)
+  items       Json                @default("[]")
+  status      PendingUpdateStatus @default(PENDING)
+  metadata    Json                @default("{}")
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  claims LootClaim[]
+
+  @@index([campaignId, status])
+  @@index([sessionId, createdAt])
+}
+
+model LootClaim {
+  id          String              @id @default(cuid())
+  lootEventId String
+  characterId String?
+  userId      String?
+  claimNote   String?             @db.Text
+  currencyCopper Int              @default(0)
+  items       Json                @default("[]")
+  status      PendingUpdateStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  lootEvent LootEvent @relation(fields: [lootEventId], references: [id], onDelete: Cascade)
+
+  @@index([lootEventId, status])
+  @@index([characterId, status])
+}
+
+model PendingInventoryUpdate {
+  id             String              @id @default(cuid())
+  campaignId     String
+  characterId    String?
+  userId         String?
+  sourceType     String
+  sourceId       String?
+  currencyCopper Int                 @default(0)
+  items          Json                @default("[]")
+  note           String?             @db.Text
+  status         PendingUpdateStatus @default(PENDING)
+  createdAt      DateTime            @default(now())
+  reviewedAt     DateTime?
+
+  @@index([campaignId, status])
+  @@index([characterId, status])
+}
+
+model CampaignHandout {
+  id             String            @id @default(cuid())
+  campaignId     String
+  sessionId      String?
+  createdById    String
+  title          String
+  type           String            @default("lore")
+  body           String            @db.Text
+  imageUrl       String?
+  visibility     HandoutVisibility @default(DM_ONLY)
+  revealedTo     Json              @default("[]")
+  metadata       Json              @default("{}")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([campaignId, visibility])
+  @@index([sessionId, updatedAt])
 }
 
 model ApprovalRequest {

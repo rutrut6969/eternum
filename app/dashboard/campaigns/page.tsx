@@ -56,9 +56,14 @@ export default async function CampaignsPage() {
           </div>
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Badge tone={archived ? "crimson" : isDm ? "gold" : "violet"}>{archived ? "Archived" : isDm ? "Manage" : "Play"}</Badge>
-            <a className="rounded-md bg-aureate px-4 py-3 text-center text-sm font-semibold text-void hover:bg-aureate/90" href={`/dashboard/campaigns/${campaign.id}`}>
-              Open Campaign
-            </a>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <a className="rounded-md border border-aureate/30 px-4 py-3 text-center text-sm font-semibold text-aureate hover:bg-aureate/10" href={`/dashboard/campaigns/${campaign.id}`}>
+                Open Manager
+              </a>
+              <a className="rounded-md bg-mana px-4 py-3 text-center text-sm font-semibold text-void hover:bg-mana/90" href={`/dashboard/campaigns/${campaign.id}/play`}>
+                Play Campaign
+              </a>
+            </div>
           </div>
         </div>
       </Card>

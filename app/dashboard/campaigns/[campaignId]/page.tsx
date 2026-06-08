@@ -211,7 +211,7 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
           ["Add note", "#notes"],
           ["Invite player", "#invites"],
           ["Create character", `/dashboard/characters/new?campaignId=${campaign.id}`],
-          ["Open VTT map", "#maps"],
+          ["Play Campaign", `/dashboard/campaigns/${campaign.id}/play`],
           ["Review approvals", "#approvals"],
           ["Roll dice", "#dice"]
         ].map(([label, href]) => (

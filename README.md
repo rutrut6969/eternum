@@ -109,9 +109,16 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Vitest test setup with coverage for session transitions, timeline generation, milestone generation, invite token handling, member role safety, upload validation, and email token expiry.
 - Eternum rules modules for ability modifiers, mana, stamina, spell tiers, spell infusion, homebrew status, disciplines, necromancy branches, and professions.
 - OpenAI integration helpers and API routes for backstory and custom spell suggestions.
-- Unified assistant foundation with persistent dashboard launcher, assistant workspace, thread/message/workflow models, intent routing, stored structured payloads, and workflow status updates.
-- Assistant routing currently recognizes character help, spell drafts, item drafts, NPC drafts, monster drafts, quest drafts, rule explanations, compendium help, and map blueprint requests.
-- Assistant routing now also recognizes currency, loot update, session listener, and session memory requests as draft workflows.
+- Unified assistant panel now feels like a campaign operating system with a persistent slide-over, recent threads, workflow shortcuts, context cards, workflow response cards, mobile full-sheet behavior, and large-message warnings.
+- Assistant routing recognizes character creation, backstory analysis, spell creation, item creation, NPC creation, NPC roleplay, monster creation, quest generation, worldbuilding, session summaries, rules questions, editable map blueprints, compendium creation, crafting help, loot tracking, currency split, campaign memory queries, and unknown/general requests.
+- Assistant message handling validates payloads, rejects malformed/empty input, supports large lore/backstory/session text, stores full messages, condenses large source text before OpenAI calls, and returns clearer errors.
+- NPC roleplay foundation schema tracks NPC profiles, memories, conversations, messages, hidden DM instructions, roleplay enablement, and auto-send policy flags.
+- Provider-agnostic voice service foundation supports future transcription, speech, previews, NPC voice creation, and voice assignment with text-only fallback.
+- Session listener foundation includes transcript segment schema and DM-gated transcript import/correction APIs.
+- Loot tracking foundation includes loot events, loot claims, pending inventory/currency update records, and a DM-gated manual loot event API.
+- Crafted item pricing service and API calculate values in copper with material, labor, profession, roll quality, rarity, quality, enchantments, durability, economy, legality, scarcity, reputation, and DM override modifiers.
+- Campaign cards now distinguish Open Manager from Play Campaign, with `/dashboard/campaigns/[campaignId]/play` as the first live tabletop/player mode foundation.
+- Dice roll and activity feed panels now use internal scroll regions so long logs do not stretch the entire page.
 - Open5e SRD integration helper for public D&D-compatible spell data.
 - Vercel-ready project scripts and environment variable template.
 
@@ -129,13 +136,15 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Blob upload supports direct user-uploaded images, but AI image generation is still planned.
 - Session notes support markdown storage and mobile display, but there is no rich markdown editor or sanitizer yet.
 - Activity feed is persisted and displayed, but realtime delivery is still only an abstraction.
-- VTT data models and a first editable map renderer exist, but advanced drag handles, token automation, fog of war, dynamic lighting, and combat UI are intentionally not implemented.
+- Campaign play mode exposes maps/VTT, dice, character list, notes/handouts, and session activity, but token movement, fog of war, combat automation, player view separation, and handout reveal controls are still planned.
+- VTT data models and a first editable map renderer exist, but drag/drop, move/resize/rotate, duplicate, multi-select, snap controls, richer layers, doors/windows/stairs/furniture/lights, token automation, fog of war, dynamic lighting, and combat UI are intentionally not implemented.
 - AI map generation is blueprint-first: structured JSON generation and validation exist, but OpenAI image generation and generated Blob upload pipelines are intentionally not wired yet.
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
 - Subscription models, feature gates, pricing page, Square checkout, webhook foundation, and AI usage tracking exist, but full Square subscription lifecycle sync, billing portal, invoices, refunds, and customer self-service are still partial.
 - Homebrew spell/item builder routes are usable entry points, but rich field-level spell/item editors and post-save image-upload handoff are still basic.
-- Unified assistant stores structured drafts and workflow state, but it does not yet convert assistant workflows directly into saved homebrew, characters, NPCs, monsters, quests, or DM review submissions.
-- Currency wallets and transfers are implemented, but loot event detection, pending inventory updates, manual loot queues, and auto-approval settings are still planned.
+- Unified assistant stores structured drafts and workflow state, but it does not yet convert assistant workflows directly into saved homebrew, characters, NPCs, monsters, quests, handouts, compendiums, or DM review submissions.
+- Currency wallets, transfers, manual loot event records, and pending inventory/currency update schema exist, but rich loot claim queues, edit/approve/reject UI, listener-driven loot detection, and auto-approval settings are still planned.
+- Voice/NPC roleplay/listener records and service abstractions are foundations only; no live transcription or text-to-speech provider is configured yet.
 - SRD data currently uses live Open5e fetches plus cache schema foundation; import/refresh scripts and normalized high-volume SRD tables are still planned.
 - Dashboard navigation is functional and mobile-friendly, but active-route highlighting and richer notification detail views are still planned.
 - Account settings display user data, but editable profile fields and linked account management are still placeholders.
@@ -161,6 +170,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Resend verification support is preserved, but production delivery is temporarily optional because sending-domain setup is limited.
 - Legacy `SessionNote` remains in the schema for compatibility while new notes use `CampaignNote`.
 - Session/activity/VTT/map schema changes require `npm run db:push` on development databases.
+- Assistant/NPC/listener/loot/handout/pricing schema changes require `npm run db:push` on development databases.
 - Editable map builder schema changes require `npm run db:push` to add `MapSourceType`, `Map.blueprintVersion`, and `Map.editorState`.
 - Subscription/billing schema changes require `npm run db:push` on development databases.
 - Square checkout and webhook foundations are implemented, but production Square configuration, subscription catalog mapping, refunds, invoices, and customer portal management still need operational setup.
@@ -178,14 +188,17 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 2. Run `npm run seed:founders` in each environment after adding `FOUNDER_ACCOUNTS`, then verify with `npm run debug:user -- email-or-username`.
 3. Add dedicated review/action flows inside the campaign Approvals tab for backstory, character, homebrew, and public publish requests.
 4. Add session detail pages for transcript, session memory, loot, encounters, and per-session notes.
-5. Add dedicated shell treatment for invite and verify-email standalone routes if they should share public chrome.
-6. Verify Square sandbox webhook payload metadata end-to-end and add deeper subscription lifecycle reconciliation.
-7. Add active-route highlighting and richer notification detail views for the authenticated account menu.
-8. Add richer map editor interactions: drag handles, snap controls, layer reordering, labels editing, and image export.
-9. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
-10. Add optional AI image generation as a visual/reference layer after blueprint editing is stable.
-11. Add assistant workflow actions that convert structured drafts into spell/item/NPC/monster/map records and submit them to DM review.
-12. Add assistant campaign memory retrieval for session summaries, NPCs, quests, loot, decisions, and character milestones.
+5. Add NPC roleplay profile editor, DM preview/approval controls, and text-only conversation UI before connecting voice.
+6. Add loot claim queue UI and pending inventory/currency approve/edit/reject actions.
+7. Add campaign player handout creation/reveal controls and player-private note surfaces.
+8. Add dedicated shell treatment for invite and verify-email standalone routes if they should share public chrome.
+9. Verify Square sandbox webhook payload metadata end-to-end and add deeper subscription lifecycle reconciliation.
+10. Add active-route highlighting and richer notification detail views for the authenticated account menu.
+11. Add richer map editor interactions: drag handles, snap controls, layer reordering, labels editing, and image export.
+12. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
+13. Add optional AI image generation as a visual/reference layer after blueprint editing is stable.
+14. Add assistant workflow actions that convert structured drafts into spell/item/NPC/monster/map records and submit them to DM review.
+15. Add assistant campaign memory retrieval for session summaries, NPCs, quests, loot, decisions, and character milestones.
 
 ## Setup
 
@@ -464,12 +477,22 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Persistent dashboard assistant launcher
 - [x] Assistant workspace route
 - [x] Assistant intent routing and workflow draft persistence
+- [x] Production-style assistant panel with shortcuts, context cards, and workflow cards
+- [x] Assistant large-message validation and model input compaction
+- [x] NPC roleplay, voice, transcript, loot, handout, and pending-update schema foundations
+- [x] Provider-agnostic voice service foundation
+- [x] DM-gated transcript import/correction API foundations
+- [x] DM-gated manual loot event API foundation
 - [x] Currency conversion helpers
 - [x] Character wallet schema and display cards
 - [x] Party treasury and currency transaction schema foundation
 - [x] Currency transfer and split API foundations
+- [x] Crafted item pricing rules service and API
 - [x] True campaign dashboard route
 - [x] Campaign gameplay loop dashboard polish
+- [x] Campaign Manager vs Play Campaign entry points
+- [x] Campaign player/live VTT foundation route
+- [x] Internal scroll limits for dice rolls and activity feeds
 - [x] Maps foundation UI polish
 - [x] Logged-in workspace redesign
 - [x] Dashboard workspace navigation
@@ -506,12 +529,14 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Assistant workflow conversion into saved homebrew/character/map records
 - [ ] Assistant submit-to-DM-review controls
 - [ ] Assistant campaign memory retrieval
-- [ ] Loot event and pending inventory update queue
+- [ ] NPC roleplay editor and DM approval controls
+- [ ] Live voice provider integration
+- [ ] Session listener consent UI and live transcript feed
+- [ ] Loot claim and pending inventory update queue UI
 - [ ] Character creator portrait upload and richer SRD trait application
 - [ ] SRD cache import/refresh scripts
 - [ ] Party treasury management UI
 - [ ] Currency transfer/split UI
-- [ ] Crafted item pricing engine
 - [ ] Rich map editor drag handles, snap controls, and layer reordering
 - [ ] AI map image generation and Blob save pipeline
 - [ ] Campaign UI for public map clone/import

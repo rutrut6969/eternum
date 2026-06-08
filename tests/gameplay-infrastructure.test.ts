@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createEmailVerificationToken, isVerificationTokenExpired } from "@/lib/auth/email-verification";
 import { usernameFromDisplayName, validateUsername } from "@/lib/auth/validation";
 import { assistantSystemPrompt, classifyAssistantIntent } from "@/lib/assistant/intents";
+import { compactForModel, validateAssistantUserMessage } from "@/lib/assistant/message-format";
 import { formatCurrency, fromCopper, splitCopper, toCopper } from "@/lib/currency/conversion";
 import crypto from "node:crypto";
 import { getInviteStatus } from "@/lib/invites";
@@ -13,6 +14,7 @@ import { transitionSessionStatus } from "@/lib/sessions";
 import { buildCampaignTimeline } from "@/lib/timeline";
 import { maxImageSizeBytes, validateImageUpload } from "@/lib/uploads";
 import { getSquareConfig, verifySquareWebhookSignature } from "@/lib/billing/square";
+import { priceCraftedItem } from "@/lib/rules/pricing";
 
 describe("campaign session transitions", () => {
   it("starts and completes sessions in order", () => {
@@ -162,11 +164,15 @@ describe("unified assistant routing", () => {
   it("classifies common creator intents", () => {
     expect(classifyAssistantIntent("Help me make a shadow spell").type).toBe("SPELL_DRAFT");
     expect(classifyAssistantIntent("Create an NPC merchant with secrets").type).toBe("NPC_DRAFT");
+    expect(classifyAssistantIntent("Roleplay as the tavern keeper").type).toBe("NPC_ROLEPLAY");
     expect(classifyAssistantIntent("Build a ruined crypt map").type).toBe("MAP_BLUEPRINT");
     expect(classifyAssistantIntent("Split the gold among the party").type).toBe("CURRENCY_HELP");
     expect(classifyAssistantIntent("Kaelen claims the loot").type).toBe("LOOT_UPDATE");
+    expect(classifyAssistantIntent("Create a city guild and faction conflict").type).toBe("WORLDBUILDING");
+    expect(classifyAssistantIntent("Price this crafted sword for a merchant").type).toBe("CRAFTING_HELP");
     expect(classifyAssistantIntent("Start listening to this session").type).toBe("SESSION_LISTENER");
-    expect(classifyAssistantIntent("What happened last session?").type).toBe("SESSION_MEMORY");
+    expect(classifyAssistantIntent("Summarize this session").type).toBe("SESSION_MEMORY");
+    expect(classifyAssistantIntent("What happened last session?").type).toBe("CAMPAIGN_MEMORY_QUERY");
     expect(classifyAssistantIntent("Explain stamina recovery").type).toBe("RULE_EXPLANATION");
   });
 
@@ -179,6 +185,20 @@ describe("unified assistant routing", () => {
   });
 });
 
+describe("assistant large message formatting", () => {
+  it("validates and compacts long messages without becoming empty", () => {
+    const long = "ancient lore ".repeat(2000);
+    const validation = validateAssistantUserMessage(long);
+    expect(validation.valid).toBe(true);
+    if (validation.valid) {
+      expect(validation.warning).toContain("Large source text");
+      const compacted = compactForModel(validation.message, 1000);
+      expect(compacted.length).toBeLessThanOrEqual(1200);
+      expect(compacted).toContain("Large source text condensed");
+    }
+  });
+});
+
 describe("currency conversion", () => {
   it("uses copper as the base unit", () => {
     expect(toCopper({ pp: 1, gp: 2, ep: 1, sp: 3, cp: 4 })).toBe(1284);
@@ -188,6 +208,23 @@ describe("currency conversion", () => {
 
   it("splits currency with an explicit remainder", () => {
     expect(splitCopper(101, 4)).toEqual({ share: 25, remainder: 1 });
+  });
+});
+
+describe("crafted item pricing", () => {
+  it("calculates copper values and merchant prices deterministically", () => {
+    const pricing = priceCraftedItem({
+      materialCostCopper: 100,
+      professionLevel: 4,
+      rarity: "uncommon",
+      enchantmentCount: 1,
+      demandModifier: 0.1
+    });
+
+    expect(pricing.baseValueCopper).toBeGreaterThan(100);
+    expect(pricing.merchantBuyCopper).toBeLessThan(pricing.baseValueCopper);
+    expect(pricing.merchantSellCopper).toBeGreaterThan(pricing.baseValueCopper);
+    expect(pricing.display.baseValue).toMatch(/CP|SP|GP|PP/);
   });
 });
 

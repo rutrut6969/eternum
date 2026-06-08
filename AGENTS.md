@@ -52,7 +52,14 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Hybrid map workflows are expected: AI drafts structure, the DM edits manually, uploaded images can act as reference/base visuals, and publication still follows approval rules.
 - The unified assistant is a routing and drafting layer. It can store threads, messages, and workflow drafts, but it must not directly make content campaign-usable.
 - Assistant-created spells, items, NPCs, monsters, maps, quests, compendiums, and rules suggestions must still flow through validation, rules-engine calculation where relevant, and DM approval.
+- Assistant UX should feel like Eternum's campaign operating system: persistent, threaded, workflow-oriented, mobile-friendly, and capable of long-form character, lore, map, NPC, monster, item, spell, quest, rules, loot, and memory workflows.
+- Large assistant inputs must be validated, stored safely, and condensed before model calls. Never send empty assistant messages or malformed tool/assistant content to OpenAI.
+- NPC roleplay is draft-first. The DM controls approval, edits, hidden instructions, auto-send policy, and pause/disable behavior. NPC AI must not reveal secrets or hidden DM info unless the DM explicitly directs it.
+- Voice features must stay provider-agnostic behind `voiceService` style helpers for transcription, speech, previews, NPC voice creation, and assignment. Text-only fallback is required.
+- Live session listening is consent-first: DM starts it explicitly, players see a listening indicator, transcripts can be edited/deleted, and game-state changes create pending updates.
 - SRD/Open5e content must remain visibly separate from homebrew and must be limited to SRD/Creative Commons/Open5e-compatible source data. Do not import proprietary non-SRD WOTC content.
+- Loot, currency, inventory, and session-memory updates detected from AI/listeners must create pending records for DM approval by default.
+- Crafted item prices must be calculated by rules services in copper, with AI limited to explanation/flavor.
 
 ## UI Rules
 
@@ -67,6 +74,9 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Cards should scale down gracefully and avoid desktop-only multi-column assumptions.
 - Campaign workspace navigation should be mobile-friendly, using horizontal scroll tabs or a compact selector instead of forcing desktop tabs onto small screens.
 - Maps/VTT controls should be visible from the campaign workspace even while full VTT rendering, combat automation, fog, lighting, and player view remain future work.
+- Campaign cards should distinguish prep/admin manager entry points from live play/VTT entry points.
+- Dice logs, activity feeds, approvals, notifications, and session logs should use internal scroll regions after a short visible list so pages do not grow without bound.
+- Handouts and player notes should be designed as live-table objects with visibility controls rather than loose public text.
 
 ## Testing Rules
 
@@ -88,6 +98,8 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Classless character creator and SRD data integration
 - Character wallets, party treasury, and currency audit foundation
 - Activity feeds and timelines
+- Campaign player/VTT mode
+- NPC roleplay, session listener, and campaign memory foundations
 - Future Square subscriptions
 - Future Discord integration
 - Future AI map/image generation

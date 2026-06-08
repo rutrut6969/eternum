@@ -13,10 +13,10 @@ export function ActivityFeed({ activities, title = "Recent activity" }: { activi
   return (
     <Card>
       <h2 className="text-2xl font-bold text-white">{title}</h2>
-      <div className="mt-5 grid gap-3">
+      <div className="mt-5 max-h-[30rem] overflow-y-auto pr-1">
         {activities.length === 0 ? <p className="text-sm text-zinc-300">No activity yet.</p> : null}
         {activities.map((activity) => (
-          <div key={activity.id} className="rounded-md border border-white/10 bg-black/25 p-3">
+          <div key={activity.id} className="mb-3 rounded-md border border-white/10 bg-black/25 p-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <Badge tone="violet">{activity.type.replace(/_/g, " ")}</Badge>
