@@ -10,7 +10,7 @@ import { subscriptionService } from "@/lib/subscriptions/service";
 
 const checkoutSchema = z.object({
   planId: z.string().optional(),
-  planCode: z.enum(["DM", "WORLDBUILDER"]).optional(),
+  planCode: z.enum(["DM", "WORLDBUILDER", "FOUNDER"]).optional(),
   marketplaceProductId: z.string().cuid().optional()
 }).refine((value) => Boolean(value.planId || value.planCode || value.marketplaceProductId), "Choose a plan or product.");
 
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     ? await prisma.subscriptionPlan.findUnique({ where: { id: parsed.data.planId } })
     : await prisma.subscriptionPlan.findUnique({ where: { code: parsed.data.planCode } });
   if (!plan || !plan.active) return NextResponse.json({ error: "Subscription plan not found." }, { status: 404 });
-  if (plan.code === "FREE" || plan.code === "FOUNDER" || plan.monthlyPriceCents <= 0) {
+  if (plan.code === "FREE" || plan.monthlyPriceCents <= 0) {
     return NextResponse.json({ error: "This plan does not use checkout." }, { status: 400 });
   }
 

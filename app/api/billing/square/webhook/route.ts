@@ -60,6 +60,12 @@ export async function POST(request: Request) {
       where: { id: metadata.subscriptionId },
       data: update
     }).catch(() => null);
+    if (metadata.planCode === "FOUNDER" && metadata.userId && update.status === "ACTIVE") {
+      await prisma.user.update({
+        where: { id: metadata.userId },
+        data: { isFounder: true, founderSince: new Date(), emailVerified: new Date() }
+      }).catch(() => null);
+    }
   }
 
   if (metadata.kind === "marketplace" && metadata.purchaseId && (type.includes("payment.created") || type.includes("payment.updated"))) {

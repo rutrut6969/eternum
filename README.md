@@ -10,6 +10,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 
 - Next.js App Router scaffold with TypeScript and TailwindCSS.
 - Dark fantasy / arcane-tech public UI: landing page, rules page, library page, about page, login/register pages, dashboard, campaign manager, character workbench, approval queue, and dice roller.
+- Public site monetization redesign with a stronger landing page, global search entry, expanded Vision page, refreshed navigation/footer, Pricing page, donation page, and launch-prep Privacy/Terms placeholders.
 - Mobile-first responsive layout pass across nav, public pages, auth forms, dashboards, campaign cards, character sheets, approval cards, library cards, and dice roll views.
 - Prisma/PostgreSQL schema for users, auth sessions, campaigns, multi-role campaign members, invites, characters, character gameplay JSON, professions, backstory analysis, homebrew content, approvals, session notes, and dice rolls.
 - NextAuth credentials configuration with Prisma adapter and password hashing.
@@ -53,7 +54,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Inventory items can be added to character-owned inventory with name, type, rarity, quantity, description, equipped state, image URL, and source.
 - SRD spell search endpoint converts Open5e spell data into Eternum spell cards with tier, mana cost, casting time, range, duration, save/attack text, and infusion options.
 - SRD/Open5e species service and API routes for species lists/details plus generic SRD entries.
-- Public Library now separates approved public homebrew from SRD/Open5e-compatible reference content and labels SRD sources.
+- Public Library now separates approved public homebrew from SRD/Open5e-compatible reference content, labels SRD sources, formats entries into readable sections, and uses collapsible mobile-friendly detail panels instead of raw source dumps.
 - Currency wallet foundation with copper-based conversion helpers, character wallets, party treasuries, transaction audit records, transfer/split APIs, and wallet display cards.
 - Basic learn/remove spell flows through character-owned learned spell data.
 - Custom spell AI route now persists generated suggestions as draft/pending homebrew with rules-engine mana/tier/concentration/infusion metadata.
@@ -66,11 +67,12 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Public library is database-backed and only shows `APPROVED_PUBLIC` content with `PUBLIC_LIBRARY` visibility.
 - Public library filters include content type, rarity, discipline, profession requirement, creator, campaign source, and name/description search.
 - Public library Prisma query is now defensive: it filters only safe scalar fields in Prisma and moves fuzzy/search/JSON filters into application-side filtering with friendly error handling.
-- Pricing page at `/pricing` with Free, DM, Worldbuilder, and Founder tiers plus Square checkout buttons for paid plans.
+- Pricing page at `/pricing` with Free, DM, Worldbuilder, and purchasable Founder lifetime tiers plus Square checkout buttons for paid plans.
+- Donation page at `/donate` with public no-account Square donation checkout that does not grant premium access.
 - Subscription and billing schema foundation for `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, and `AIUsage`.
 - Subscription feature-gate service foundation with `canCreateCampaign()`, `canUseAdvancedAI()`, `canPublishPublicHomebrew()`, `canUseFutureMapGeneration()`, and `canUseFutureDiscordFeatures()`.
 - Founder/max-tier support with `isFounder`, `founderSince`, active Founder subscriptions, Founder badges, safe `npm run seed:founders`, and `npm run debug:user -- identifier`.
-- Square billing foundation with server-side environment selector, checkout route at `/api/billing/checkout`, webhook route at `/api/billing/square/webhook`, payment-link creation, webhook signature verification, billing events, marketplace purchase models, and entitlement grant foundation.
+- Square billing foundation with server-side environment selector, checkout route at `/api/billing/checkout`, donation checkout route at `/api/billing/donate`, webhook route at `/api/billing/square/webhook`, payment-link creation, webhook signature verification, billing events, marketplace purchase models, and entitlement grant foundation.
 - Server-side gates now include `canAccessDmTools()` and are wired into campaign creation, advanced AI routes, and public homebrew publishing.
 - Monthly AI usage tracking is wired into backstory, spell, and item AI routes after authorization checks.
 - Registration usernames can auto-generate from Display Name, stop auto-updating after manual edits, and reset from display name on demand.
@@ -140,7 +142,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - VTT data models and a first editable map renderer exist, but drag/drop, move/resize/rotate, duplicate, multi-select, snap controls, richer layers, doors/windows/stairs/furniture/lights, token automation, fog of war, dynamic lighting, and combat UI are intentionally not implemented.
 - AI map generation is blueprint-first: structured JSON generation and validation exist, but OpenAI image generation and generated Blob upload pipelines are intentionally not wired yet.
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
-- Subscription models, feature gates, pricing page, Square checkout, webhook foundation, and AI usage tracking exist, but full Square subscription lifecycle sync, billing portal, invoices, refunds, and customer self-service are still partial.
+- Subscription models, feature gates, pricing page, Square checkout, Founder lifetime checkout, donation checkout, webhook foundation, and AI usage tracking exist, but full Square subscription lifecycle sync, billing portal, invoices, refunds, and customer self-service are still partial.
 - Homebrew spell/item builder routes are usable entry points, but rich field-level spell/item editors and post-save image-upload handoff are still basic.
 - Unified assistant stores structured drafts and workflow state, but it does not yet convert assistant workflows directly into saved homebrew, characters, NPCs, monsters, quests, handouts, compendiums, or DM review submissions.
 - Currency wallets, transfers, manual loot event records, and pending inventory/currency update schema exist, but rich loot claim queues, edit/approve/reject UI, listener-driven loot detection, and auto-approval settings are still planned.
@@ -152,6 +154,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - `/invite/[token]` and `/verify-email` currently use the neutral root frame while public/auth/dashboard route groups have dedicated shells.
 - Manual visual QA should continue on real devices and browser widths after each UI pass; this pass added CSS/layout safeguards for 390px, 430px, and 768px widths but still relies on build/test validation unless a local browser session is running.
 - The live `https://eternumvtt.com` URL did not respond from this development environment during this pass, so visual QA was performed against localhost with Chrome device emulation.
+- Donations create Square payment links without requiring an Eternum account and intentionally do not grant premium access.
+- Founder can now be purchased as a lifetime plan through checkout, while `npm run seed:founders` remains available for manual promotion of existing founder accounts.
 
 ## Known Issues
 
@@ -181,12 +185,13 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Unified assistant messages require `OPENAI_API_KEY` and currently use the existing advanced AI feature gate.
 - Assistant workflows are persisted as drafts, but submit-to-review/save-to-content actions are still future implementation work.
 - Wallet transfers require enough character balance and currently operate through API foundations; richer transfer/split UI and party treasury management screens are still planned.
+- Pricing checkout creates payment links, but full customer self-service, cancellation flows, refunds, and invoice history still need Square lifecycle polish.
 
 ## Next Recommended Steps
 
-1. Configure Square sandbox credentials and verify `/api/billing/checkout` creates payment links.
+1. Configure Square sandbox credentials and verify `/api/billing/checkout` creates DM, Worldbuilder, and Founder payment links.
 2. Run `npm run seed:founders` in each environment after adding `FOUNDER_ACCOUNTS`, then verify with `npm run debug:user -- email-or-username`.
-3. Add dedicated review/action flows inside the campaign Approvals tab for backstory, character, homebrew, and public publish requests.
+3. Verify `/api/billing/donate` creates public donation payment links and confirms donations do not mutate subscription state.
 4. Add session detail pages for transcript, session memory, loot, encounters, and per-session notes.
 5. Add NPC roleplay profile editor, DM preview/approval controls, and text-only conversation UI before connecting voice.
 6. Add loot claim queue UI and pending inventory/currency approve/edit/reject actions.
@@ -224,6 +229,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - `EMAIL_FROM`: Sender address for Resend, for example `noreply@eternumtabletop.com`.
 - `BLOB_READ_WRITE_TOKEN`: Vercel Blob token for homebrew image uploads. Image URL fields work without upload support.
 - `FOUNDER_ACCOUNTS`: Optional comma-separated emails, usernames, or display usernames to promote with `npm run seed:founders`. If omitted, the seed exits safely without changing accounts.
+- `FOUNDER_LIFETIME_PRICE_CENTS`: Optional Founder lifetime checkout price in cents. Defaults to `24900`.
 - `SQUARE_ENVIRONMENT`: `sandbox` or `production`.
 - `SQUARE_SANDBOX_ACCESS_TOKEN`, `SQUARE_SANDBOX_APPLICATION_ID`, `SQUARE_SANDBOX_LOCATION_ID`, `SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY`: Square sandbox credentials.
 - `SQUARE_PRODUCTION_ACCESS_TOKEN`, `SQUARE_PRODUCTION_APPLICATION_ID`, `SQUARE_PRODUCTION_LOCATION_ID`, `SQUARE_PRODUCTION_WEBHOOK_SIGNATURE_KEY`: Square production credentials.
@@ -233,7 +239,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 New Square environment variables were added in this pass. The deprecated email verification provider variables remain removed in favor of Resend.
 
-Square subscription integration uses server-only credentials selected by `SQUARE_ENVIRONMENT`. Founder accounts bypass checkout and must be promoted in the database with `npm run seed:founders`.
+Square subscription integration uses server-only credentials selected by `SQUARE_ENVIRONMENT`. Founder accounts can be purchased through checkout, and existing accounts can still be promoted safely with `npm run seed:founders`.
 
 ## Founder Account Setup
 
@@ -256,8 +262,10 @@ Founder seeding:
 1. Set `SQUARE_ENVIRONMENT=sandbox`.
 2. Add sandbox access token, application ID, location ID, and webhook signature key.
 3. Register `/api/billing/square/webhook` in Square and set `SQUARE_WEBHOOK_NOTIFICATION_URL` to the exact public URL.
-4. Use `/pricing` checkout buttons for DM/Worldbuilder test payment links.
-5. Switch `SQUARE_ENVIRONMENT=production` only after production credentials and webhook URL are configured.
+4. Set `FOUNDER_LIFETIME_PRICE_CENTS` if the Founder lifetime price should differ from `$249`.
+5. Use `/pricing` checkout buttons for DM, Worldbuilder, and Founder test payment links.
+6. Use `/donate` to verify no-account Square donations. Donations must remain separate from premium access and subscription state.
+7. Switch `SQUARE_ENVIRONMENT=production` only after production credentials and webhook URL are configured.
 
 ## Account Rules
 
@@ -332,7 +340,9 @@ Production Resend delivery is temporarily optional while the sending domain is l
 - `subscriptionService` centralizes feature-gate decisions for campaign creation, advanced AI, public homebrew publishing, future map generation, and future Discord features.
 - Founder accounts are treated as the highest tier and pass all current/future premium gates, including DM tools, advanced AI, public publishing, future map generation, and future Discord/VTT premium features.
 - Run `npm run seed:founders` to promote existing accounts. The script never changes passwords, never recreates existing accounts, skips missing accounts, masks email output, and marks founder accounts verified.
-- The current pass does not implement Square checkout, Square webhooks, billing logic, subscription enforcement, Stripe, or payment processing.
+- Square checkout currently creates hosted payment links for DM, Worldbuilder, and Founder. The webhook route records Square events and promotes Founder when valid metadata is received, but full subscription reconciliation, billing portal support, invoices, refunds, and customer self-service remain planned.
+- Donations use a separate public Square payment-link route and intentionally do not grant premium access.
+- Stripe is intentionally not implemented.
 
 ## Invite Links
 
@@ -516,6 +526,14 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] OpenAI integration foundation
 - [x] Open5e SRD integration foundation
 - [x] Public pages and dashboard shells
+- [x] Public homepage conversion redesign
+- [x] Expanded Vision/About page
+- [x] Public nav and footer monetization links
+- [x] Global public search foundation
+- [x] Readable SRD/Open5e public library cards
+- [x] Founder lifetime checkout foundation
+- [x] Public Square donation page and route
+- [x] Launch-prep Privacy and Terms pages
 - [x] README tracker
 
 ### In Progress

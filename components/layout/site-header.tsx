@@ -21,11 +21,11 @@ type SiteHeaderProps = {
 };
 
 const publicLinks = [
-  { href: "/rules", label: "Rules" },
+  { href: "/#features", label: "Features" },
   { href: "/library", label: "Library" },
-  { href: "/maps", label: "Maps" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/about", label: "Vision" }
+  { href: "/about", label: "Vision" },
+  { href: "/donate", label: "Donate" }
 ];
 
 const appLinks = [

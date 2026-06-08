@@ -5,7 +5,7 @@ export const defaultPlans: Record<SubscriptionPlanCode, { name: string; monthlyP
   FREE: { name: "Free", monthlyPriceCents: 0, description: "Player access, public browsing, and basic table tools.", sortOrder: 0 },
   DM: { name: "DM", monthlyPriceCents: 1200, description: "Campaign management, approvals, sessions, and expanded AI.", sortOrder: 10 },
   WORLDBUILDER: { name: "Worldbuilder", monthlyPriceCents: 2500, description: "Advanced worldbuilding, publishing, and future premium VTT tools.", sortOrder: 20 },
-  FOUNDER: { name: "Founder", monthlyPriceCents: 0, description: "Lifetime max-tier founder access.", sortOrder: 100 }
+  FOUNDER: { name: "Founder", monthlyPriceCents: Number(process.env.FOUNDER_LIFETIME_PRICE_CENTS ?? 24900), description: "One-time lifetime max-tier founder access.", sortOrder: 100 }
 };
 
 export async function ensureSubscriptionPlans() {
@@ -36,5 +36,6 @@ export async function ensureSubscriptionPlans() {
 export function planCheckoutLabel(code: SubscriptionPlanCode) {
   if (code === "DM") return "Eternum DM monthly access";
   if (code === "WORLDBUILDER") return "Eternum Worldbuilder monthly access";
+  if (code === "FOUNDER") return "Eternum Founder lifetime access";
   return `Eternum ${code} access`;
 }

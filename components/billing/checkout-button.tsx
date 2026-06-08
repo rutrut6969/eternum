@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export function CheckoutButton({ planCode, disabled, label }: { planCode: "DM" | "WORLDBUILDER"; disabled?: boolean; label: string }) {
+export function CheckoutButton({ planCode, disabled, label }: { planCode: "DM" | "WORLDBUILDER" | "FOUNDER"; disabled?: boolean; label: string }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
