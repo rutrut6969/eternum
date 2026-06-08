@@ -1,14 +1,13 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ActivityFeed } from "@/components/campaigns/activity-feed";
-import { VttFoundationPanel } from "@/components/campaigns/vtt-foundation-panel";
-import { DiceRoller } from "@/components/dice/dice-roller";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { LiveTabletopShell } from "@/components/campaigns/live-tabletop-shell";
 import { requireUser } from "@/lib/auth/session";
 import { hasDmPermission } from "@/lib/campaign-auth";
 import { prisma } from "@/lib/prisma";
 import { subscriptionService } from "@/lib/subscriptions/service";
+
+function jsonObject(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
 
 export default async function CampaignPlayPage({ params }: { params: Promise<{ campaignId: string }> }) {
   const user = await requireUser();
@@ -23,117 +22,114 @@ export default async function CampaignPlayPage({ params }: { params: Promise<{ c
     where: { id: campaignId },
     include: {
       campaignSessions: { where: { status: { not: "ARCHIVED" } }, orderBy: { sessionNumber: "desc" } },
-      characters: { include: { owner: { select: { name: true, username: true } } } },
-      activityLogs: { include: { actor: { select: { name: true, username: true } } }, orderBy: { createdAt: "desc" }, take: 15 },
-      campaignNotes: {
-        where: {
-          OR: [
-            { visibility: "CAMPAIGN_SHARED" },
-            ...(isDm ? [{ visibility: "DM_ONLY" as const }] : []),
-            { visibility: "CHARACTER_PRIVATE", character: { ownerId: user.id } },
-            { authorId: user.id }
-          ]
+      characters: { include: { owner: { select: { id: true, name: true, username: true } } } },
+      maps: {
+        include: {
+          createdBy: { select: { name: true, username: true } },
+          images: { orderBy: { createdAt: "desc" } },
+          tags: true,
+          layers: { orderBy: { order: "asc" } },
+          tokens: { include: { character: { select: { id: true, name: true, ownerId: true } } } }
         },
-        include: { author: { select: { name: true, username: true } }, character: { select: { name: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 8
+        orderBy: { updatedAt: "desc" }
       },
-      maps: { include: { images: true, tags: true, layers: true, tokens: true, encounters: true }, orderBy: { updatedAt: "desc" } }
+      activityLogs: { include: { actor: { select: { name: true, username: true } } }, orderBy: { createdAt: "desc" }, take: 20 },
+      liveState: true
     }
   });
   if (!campaign) notFound();
 
-  const activeSession = campaign.campaignSessions.find((session) => session.status === "ACTIVE");
-  const sessions = campaign.campaignSessions.map((session) => ({ id: session.id, title: session.title }));
+  const activeSession = campaign.campaignSessions.find((session) => session.status === "ACTIVE") ?? null;
+  const liveState = campaign.liveState ?? await prisma.campaignLiveState.create({ data: { campaignId: campaign.id } });
+  const activeMap = liveState.activeMapId ? campaign.maps.find((map) => map.id === liveState.activeMapId) ?? null : null;
+  const fogState = activeMap
+    ? await prisma.mapFogState.upsert({
+        where: { campaignId_mapId: { campaignId: campaign.id, mapId: activeMap.id } },
+        update: { enabled: liveState.fogEnabled },
+        create: { campaignId: campaign.id, mapId: activeMap.id, enabled: liveState.fogEnabled }
+      })
+    : null;
+
   const maps = campaign.maps.map((map) => ({
     id: map.id,
     name: map.name,
     description: map.description,
-    width: map.width,
-    height: map.height,
+    sourceType: map.sourceType,
     gridType: map.gridType,
-    approvalStatus: map.approvalStatus,
-    visibility: map.visibility,
-    sessionTitle: campaign.campaignSessions.find((session) => session.id === map.sessionId)?.title ?? null,
-    images: map.images,
-    tags: map.tags,
-    layers: map.layers,
-    tokens: map.tokens,
-    encounters: map.encounters
+    gridWidth: map.gridWidth,
+    gridHeight: map.gridHeight,
+    gridSize: map.gridSize,
+    editorState: jsonObject(map.editorState),
+    images: map.images.map((image) => ({
+      id: image.id,
+      imageUrl: image.imageUrl,
+      imageAltText: image.imageAltText,
+      width: image.width,
+      height: image.height,
+      createdAt: image.createdAt.toISOString()
+    })),
+    tags: map.tags.map((tag) => ({ label: tag.label })),
+    layers: map.layers.map((layer) => ({
+      id: layer.id,
+      name: layer.name,
+      order: layer.order,
+      visible: layer.visible,
+      locked: layer.locked,
+      data: layer.data
+    })),
+    tokens: map.tokens
+      .filter((token) => isDm || (!token.hidden && token.visibility !== "DM_ONLY") || token.ownerUserId === user.id || token.character?.ownerId === user.id)
+      .map((token) => ({
+        id: token.id,
+        mapId: token.mapId,
+        characterId: token.characterId,
+        kind: token.kind,
+        name: token.name,
+        imageUrl: token.imageUrl,
+        x: token.x,
+        y: token.y,
+        width: token.width,
+        height: token.height,
+        rotation: token.rotation,
+        visibility: token.visibility,
+        ownerUserId: token.ownerUserId,
+        controlledByUserIds: token.controlledByUserIds,
+        hidden: token.hidden,
+        locked: token.locked,
+        character: token.character
+      })),
+    createdAt: map.createdAt.toISOString(),
+    createdBy: map.createdBy
   }));
-  const campaignOption = [{ id: campaign.id, name: campaign.name, roles: [...roles] }];
-  const characterOptions = campaign.characters.map((character) => ({ id: character.id, name: character.name, campaignId: character.campaignId }));
-  const activities = campaign.activityLogs.map((activity) => ({
-    id: activity.id,
-    type: activity.type,
-    metadata: activity.metadata,
-    createdAt: activity.createdAt.toISOString(),
-    actor: activity.actor
-  }));
+
+  const normalizedActiveMap = activeMap ? maps.find((map) => map.id === activeMap.id) ?? null : null;
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-7 sm:px-5 sm:py-10">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <Link href={`/dashboard/campaigns/${campaign.id}`} className="text-sm text-mana">Back to manager</Link>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Badge tone={activeSession ? "stamina" : "mana"}>{activeSession ? "Session live" : "No active session"}</Badge>
-            <Badge tone={isDm ? "gold" : "violet"}>{isDm ? "DM controls" : "Player mode"}</Badge>
-          </div>
-          <h1 className="mt-4 text-3xl font-black text-white sm:text-5xl">Play {campaign.name}</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">Live tabletop foundation for maps, dice, character tools, notes, handouts, session feed, tokens, and future combat automation.</p>
-        </div>
-      </div>
-
-      <section className="mt-7 grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
-        <VttFoundationPanel campaignId={campaign.id} maps={maps} sessions={sessions} canManage={isDm} />
-        <div className="grid gap-5">
-          <Card>
-            <h2 className="text-2xl font-bold text-white">Live session</h2>
-            {activeSession ? (
-              <div className="mt-4">
-                <Badge tone="stamina">Session #{activeSession.sessionNumber}</Badge>
-                <h3 className="mt-3 text-xl font-bold text-white">{activeSession.title}</h3>
-                <p className="mt-2 text-sm text-zinc-300">{activeSession.description || "No session description yet."}</p>
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-zinc-300">A DM can start a session from the campaign manager. Players can still prep sheets, notes, and rolls here.</p>
-            )}
-          </Card>
-          <Card>
-            <h2 className="text-2xl font-bold text-white">Characters</h2>
-            <div className="mt-4 max-h-72 overflow-y-auto pr-1">
-              {campaign.characters.length === 0 ? <p className="text-sm text-zinc-300">No characters are attached yet.</p> : null}
-              {campaign.characters.map((character) => (
-                <div key={character.id} className="mb-3 rounded-md border border-white/10 bg-black/25 p-3">
-                  <p className="font-bold text-white">{character.name}</p>
-                  <p className="text-xs text-zinc-500">{character.owner.name || character.owner.username}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      <section className="mt-7 grid gap-5 xl:grid-cols-[1fr_0.8fr]">
-        <DiceRoller campaigns={campaignOption} characters={characterOptions} />
-        <div className="grid gap-5">
-          <ActivityFeed activities={activities} title="Session activity" />
-          <Card>
-            <h2 className="text-2xl font-bold text-white">Notes and handouts</h2>
-            <div className="mt-4 max-h-80 overflow-y-auto pr-1">
-              {campaign.campaignNotes.length === 0 ? <p className="text-sm text-zinc-300">No visible notes or handouts yet.</p> : null}
-              {campaign.campaignNotes.map((note) => (
-                <div key={note.id} className="mb-3 rounded-md border border-white/10 bg-black/25 p-3">
-                  <Badge tone={note.visibility === "DM_ONLY" ? "crimson" : "mana"}>{note.visibility.replace(/_/g, " ")}</Badge>
-                  <h3 className="mt-2 font-bold text-white">{note.title}</h3>
-                  <p className="mt-2 line-clamp-4 text-sm text-zinc-300">{note.body}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      </section>
-    </main>
+    <LiveTabletopShell
+      campaign={{ id: campaign.id, name: campaign.name }}
+      userId={user.id}
+      isDm={isDm}
+      initialMaps={maps}
+      initialLiveState={{
+        liveState: {
+          activeMapId: liveState.activeMapId,
+          fogEnabled: liveState.fogEnabled,
+          gridEnabled: liveState.gridEnabled,
+          updatedAt: liveState.updatedAt.toISOString()
+        },
+        activeMap: normalizedActiveMap,
+        fogState: fogState ? { enabled: fogState.enabled, revealedRegions: fogState.revealedRegions, hiddenRegions: fogState.hiddenRegions } : null,
+        isDm
+      }}
+      activeSession={activeSession ? { id: activeSession.id, title: activeSession.title, status: activeSession.status } : null}
+      characters={campaign.characters.map((character) => ({ id: character.id, name: character.name, campaignId: character.campaignId, ownerId: character.ownerId }))}
+      activities={campaign.activityLogs.map((activity) => ({
+        id: activity.id,
+        type: activity.type,
+        metadata: activity.metadata,
+        createdAt: activity.createdAt.toISOString(),
+        actor: activity.actor
+      }))}
+    />
   );
 }

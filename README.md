@@ -95,6 +95,11 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Campaign workspace overview shows active session, recent activity, party characters, pending approvals, recent dice rolls, current maps, and quick actions.
 - Member role editing, invite creation/copy links, and campaign settings now live inside the dedicated campaign workspace instead of the campaign launcher.
 - VTT campaign panel now displays map images, descriptions, tags, grid/status badges, AI-image badges, visible empty states, and lets DMs attach new map records to either the campaign or a specific session.
+- Campaign map library now supports uploaded battlemap images through Vercel Blob, with `sourceType: UPLOAD`, campaign-only visibility, thumbnail previews, image dimensions, grid type, grid width/height, pixels-per-cell, grid offset, uploader attribution, Set Active actions, and Edit Alignment links.
+- `/dashboard/campaigns/[campaignId]/play` now opens a full-screen live tabletop shell instead of a dashboard card page, with active map canvas, map selector, uploaded image rendering, structured map rendering fallback, token placement/movement, manual fog toggle/reveal foundation, dice roller, activity feed, party panel, and polling-based live-state refresh.
+- Campaign live play state now persists in `CampaignLiveState`, including active map, active session, fog enabled state, grid enabled state, current round, and future turn metadata.
+- Manual fog-of-war foundation now persists per campaign/map through `MapFogState` with enabled state and simple revealed/hidden region JSON.
+- Map tokens now support campaign/map ownership, character links, owner/control metadata, dimensions, rotation, visibility, hidden/locked state, conditions, notes, and server-side movement permission checks.
 - Editable map builder foundation with `/dashboard/maps/new` and `/dashboard/maps/[mapId]/edit`, using SVG grid rendering and structured `MapLayer.data` rather than flat images.
 - Map editor Phase 2 usability pass with selection, Shift+Click multi-select, drag/move, arrow-key nudging, room drag creation, straight wall/corridor creation, resize handles, rotation, duplicate/delete, undo/redo, zoom controls, grid toggle, styled terrain patterns, layer controls, and an editable properties panel.
 - Map editor full-screen sandbox overhaul: `/dashboard/maps/[mapId]/edit` now opens as a dedicated fixed `100dvh` workspace with compact top bar, vertical tool rail, large SVG canvas, right inspector, bottom status bar, body scroll lock, and mobile light-edit warning.
@@ -143,8 +148,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Blob upload supports direct user-uploaded images, but AI image generation is still planned.
 - Session notes support markdown storage and mobile display, but there is no rich markdown editor or sanitizer yet.
 - Activity feed is persisted and displayed, but realtime delivery is still only an abstraction.
-- Campaign play mode exposes maps/VTT, dice, character list, notes/handouts, and session activity, but token movement, fog of war, combat automation, player view separation, and handout reveal controls are still planned.
-- VTT data models and a full-screen editable map renderer exist, but rich furniture asset libraries, token automation, fog of war, dynamic lighting, realtime collaboration, player view separation, and combat UI are intentionally not implemented.
+- Campaign play mode now exposes a full-screen active tabletop shell with uploaded maps, active map state, token placement/movement, manual fog foundation, dice, party list, and activity polling, but combat automation, player view preview, handout reveal controls, rich initiative tools, and advanced encounter UI are still planned.
+- VTT data models, uploaded image maps, full-screen play shell, and a full-screen editable map renderer exist, but rich furniture asset libraries, token automation, dynamic lighting, realtime provider integration, player view separation, and combat UI are intentionally not implemented.
 - AI map generation is blueprint-first: structured JSON generation and validation exist, but OpenAI image generation and generated Blob upload pipelines are intentionally not wired yet.
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
 - Subscription models, feature gates, pricing page, Square checkout, Founder lifetime checkout, donation checkout, webhook foundation, and AI usage tracking exist, but full Square subscription lifecycle sync, billing portal, invoices, refunds, and customer self-service are still partial.
@@ -182,6 +187,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Session/activity/VTT/map schema changes require `npm run db:push` on development databases.
 - Assistant/NPC/listener/loot/handout/pricing schema changes require `npm run db:push` on development databases.
 - Editable map builder schema changes require `npm run db:push` to add `MapSourceType`, `Map.blueprintVersion`, and `Map.editorState`.
+- Uploaded map/live tabletop schema changes require `npm run db:push` to add `CampaignLiveState`, `MapFogState`, and expanded `MapToken` fields.
 - Subscription/billing schema changes require `npm run db:push` on development databases.
 - Square checkout and webhook foundations are implemented, but production Square configuration, subscription catalog mapping, refunds, invoices, and customer portal management still need operational setup.
 - `npm run seed:founders` is update-only and safe for passwords/data. It must be run against the database where the target user already exists.
@@ -490,6 +496,13 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Character milestone tracking and display
 - [x] VTT foundation schema for maps, layers, tokens, encounters, and initiative
 - [x] VTT placeholder API and campaign dashboard panel
+- [x] Uploaded map image import for campaign map libraries
+- [x] Campaign active map live-state model and API
+- [x] Full-screen Play Campaign tabletop shell
+- [x] Uploaded image maps rendered in Play Campaign
+- [x] Basic token placement and server-authorized token movement
+- [x] Manual fog-of-war persistence foundation
+- [x] Polling fallback for live tabletop state
 - [x] AI map generation data model foundation
 - [x] Public map library page and safe search filters
 - [x] Public map clone/import API foundation
@@ -597,7 +610,9 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Subscription billing portal
 - [ ] Subscription enforcement policy
 - [ ] AI-generated top-down map images
-- [ ] Uploaded map image attachment UI
+- [x] Uploaded map image attachment UI
+- [ ] Public map publishing ownership confirmation and review queue
+- [ ] Paid map marketplace listing workflow
 - [ ] Map approval/publication workflow UI
 - [ ] Discord integration
 - [ ] Full VTT token/map rendering

@@ -50,6 +50,8 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Eternum: Inheritance is a planned future RPG concept, not a promised release. Use cautious language such as "may inspire", "planned future project", "opt-in", "reviewed", and "curated"; never promise automatic canon inclusion or a release date.
 - The map builder may be inspired by the broad category of sketch-style tabletop map editors, but must not copy Dungeon Scrawl code, branding, UI, interaction design, or assets.
 - Structured editable map data is preferred over flat map images. Rooms, corridors, terrain, notes, spawn points, and secrets should remain editable through `MapLayer.data`.
+- Uploaded image-backed maps are first-class campaign maps for fast play. DMs must be able to import third-party/original map images without recreating them manually in the Eternum editor.
+- Uploaded maps default to `sourceType: UPLOAD`, campaign-only visibility, image-backed rendering, and grid/alignment metadata in `Map.editorState`.
 - AI map generation should produce validated map blueprints before any data is saved. AI image generation is separate and should not replace editable blueprint data.
 - Hybrid map workflows are expected: AI drafts structure, the DM edits manually, uploaded images can act as reference/base visuals, and publication still follows approval rules.
 - The unified assistant is a routing and drafting layer. It can store threads, messages, and workflow drafts, but it must not directly make content campaign-usable.
@@ -77,6 +79,8 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Cards should scale down gracefully and avoid desktop-only multi-column assumptions.
 - Campaign workspace navigation should be mobile-friendly, using horizontal scroll tabs or a compact selector instead of forcing desktop tabs onto small screens.
 - Maps/VTT controls should be visible from the campaign workspace even while full VTT rendering, combat automation, fog, lighting, and player view remain future work.
+- Play Campaign should use a full-screen tabletop shell, not a dashboard card layout. Active map state, token movement, fog state, dice, activity, and campaign tools belong in this live play surface.
+- Realtime can start with a swappable polling fallback, but live play should not depend on manual page refresh.
 - Campaign cards should distinguish prep/admin manager entry points from live play/VTT entry points.
 - Map editor features should keep canonical geometry in `MapLayer.data`; editor UI may add selection, movement, resizing, rotation, history, viewport, and styling, but should not flatten editable maps into images.
 - Map editing should use a dedicated full-screen sandbox shell when a map is open for editing. The editor owns its own top bar, tool rail, canvas viewport, inspector, status bar, pan/zoom state, and body scroll locking.

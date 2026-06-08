@@ -69,7 +69,7 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
       approvals: { include: { homebrew: true, reviewer: { select: { name: true, username: true } } }, orderBy: { createdAt: "desc" }, take: 30 },
       diceRolls: { include: { roller: { select: { name: true, username: true } }, character: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 8 },
       campaignEntitlements: { include: { product: true }, orderBy: { grantedAt: "desc" }, take: 20 },
-      maps: { include: { images: true, tags: true, layers: true, tokens: true, encounters: true }, orderBy: { updatedAt: "desc" } }
+      maps: { include: { createdBy: { select: { name: true, username: true } }, images: true, tags: true, layers: true, tokens: true, encounters: true }, orderBy: { updatedAt: "desc" } }
     }
   });
   if (!campaign) notFound();
@@ -113,11 +113,17 @@ export default async function CampaignDashboardPage({ params }: { params: Promis
     id: map.id,
     name: map.name,
     description: map.description,
+    sourceType: map.sourceType,
     width: map.width,
     height: map.height,
+    gridWidth: map.gridWidth,
+    gridHeight: map.gridHeight,
+    gridSize: map.gridSize,
     gridType: map.gridType,
     approvalStatus: map.approvalStatus,
     visibility: map.visibility,
+    createdAt: map.createdAt.toISOString(),
+    createdBy: map.createdBy,
     sessionTitle: campaign.campaignSessions.find((session) => session.id === map.sessionId)?.title ?? null,
     images: map.images,
     tags: map.tags,

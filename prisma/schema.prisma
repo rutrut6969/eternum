@@ -100,6 +100,9 @@ enum ActivityType {
   ITEM_CRAFTED
   AFFINITY_GAINED
   NOTE_CREATED
+  MAP_UPDATED
+  TOKEN_MOVED
+  FOG_UPDATED
 }
 
 enum AssistantThreadStatus {
@@ -581,6 +584,8 @@ model Campaign {
   partyTreasury PartyTreasury?
   currencyTransactions CurrencyTransaction[]
   campaignEntitlements CampaignEntitlement[]
+  liveState CampaignLiveState?
+  mapFogStates MapFogState[]
 }
 
 model CampaignMember {
@@ -1050,6 +1055,7 @@ model CampaignSession {
   milestones CharacterMilestone[]
   maps       Map[]
   encounters CombatEncounter[]
+  liveStates CampaignLiveState[]
 
   @@unique([campaignId, sessionNumber])
 }
@@ -1143,11 +1149,52 @@ model Map {
   tags      MapTag[]
   layers    MapLayer[]
   tokens    MapToken[]
+  fogStates MapFogState[]
+  liveStates CampaignLiveState[] @relation("ActiveLiveMap")
   encounters CombatEncounter[]
 
   @@index([approvalStatus, visibility])
   @@index([campaignId])
   @@index([sessionId])
+}
+
+model CampaignLiveState {
+  id                 String   @id @default(cuid())
+  campaignId         String   @unique
+  activeSessionId    String?
+  activeMapId        String?
+  fogEnabled         Boolean  @default(false)
+  gridEnabled        Boolean  @default(true)
+  currentRound       Int      @default(0)
+  currentTurnTokenId String?
+  metadata           Json     @default("{}")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  activeMap Map? @relation("ActiveLiveMap", fields: [activeMapId], references: [id], onDelete: SetNull)
+  activeSession CampaignSession? @relation(fields: [activeSessionId], references: [id], onDelete: SetNull)
+
+  @@index([activeMapId])
+  @@index([activeSessionId])
+}
+
+model MapFogState {
+  id              String   @id @default(cuid())
+  campaignId      String
+  mapId           String
+  enabled         Boolean  @default(false)
+  revealedRegions Json     @default("[]")
+  hiddenRegions   Json     @default("[]")
+  updatedById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  map Map @relation(fields: [mapId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, mapId])
+  @@index([mapId])
 }
 
 model MapImage {
@@ -1191,22 +1238,40 @@ model MapLayer {
 
 model MapToken {
   id          String    @id @default(cuid())
+  campaignId  String?
   mapId       String
   characterId String?
   kind        TokenKind @default(CHARACTER)
   name        String
+  imageUrl    String?
   monsterRef  String?
   x           Float     @default(0)
   y           Float     @default(0)
+  width       Float     @default(1)
+  height      Float     @default(1)
   size        Float     @default(1)
+  rotation    Float     @default(0)
+  layer       String    @default("tokens")
+  visibility  String    @default("PARTY_VISIBLE")
+  ownerUserId String?
+  controlledByUserIds Json @default("[]")
   hp          Int?
   maxHp       Int?
   hidden      Boolean   @default(false)
+  locked      Boolean   @default(false)
+  conditions  Json      @default("[]")
+  notes       Json      @default("{}")
+  lastMovedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   metadata    Json      @default("{}")
 
   map       Map        @relation(fields: [mapId], references: [id], onDelete: Cascade)
   character Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
   initiativeEntries InitiativeEntry[]
+
+  @@index([campaignId, mapId])
+  @@index([ownerUserId])
 }
 
 model CombatEncounter {
