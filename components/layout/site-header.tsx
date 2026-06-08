@@ -125,7 +125,7 @@ export function SiteHeader({ account, notificationCount, showDmTools, variant }:
 
         <div className="flex h-10 w-10 items-center justify-end md:hidden">
           {account ? (
-            <AccountMenu user={account} notificationCount={notificationCount} showAdminTools={showDmTools} compact />
+            <AccountMenu user={account} notificationCount={notificationCount} showAdminTools={showDmTools} />
           ) : (
             <Link href="/login" className="whitespace-nowrap rounded-md border border-aureate/25 px-2 py-2 text-xs text-aureate">Sign in</Link>
           )}
