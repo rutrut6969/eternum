@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createSquarePaymentLink } from "@/lib/billing/square";
+import { createSquareOneTimePaymentLink } from "@/lib/billing/square";
 import { prisma } from "@/lib/prisma";
 
 const donationSchema = z.object({
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Choose a donation amount between $1 and $500." }, { status: 400 });
 
   const appUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  const link = await createSquarePaymentLink({
+  const link = await createSquareOneTimePaymentLink({
     name: "Eternum development donation",
     amountCents: parsed.data.amountCents,
     redirectUrl: `${appUrl}/donate?thanks=1`,

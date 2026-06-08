@@ -4,10 +4,18 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { reconcileUserSubscription } from "@/lib/subscriptions/reconciliation";
 import { subscriptionService } from "@/lib/subscriptions/service";
 
 export default async function AccountPage() {
   const sessionUser = await requireUser();
+  const latestSubscription = await prisma.userSubscription.findFirst({
+    where: { userId: sessionUser.id, squareSubscriptionId: { not: null } },
+    orderBy: { startedAt: "desc" }
+  });
+  if (latestSubscription?.squareSubscriptionId) {
+    await reconcileUserSubscription(latestSubscription.id).catch(() => null);
+  }
   const user = await prisma.user.findUnique({
     where: { id: sessionUser.id },
     include: {
@@ -18,6 +26,8 @@ export default async function AccountPage() {
   if (!user) return null;
   const planCode = await subscriptionService.getCurrentPlanCode(user.id);
   const subscription = user.subscriptions[0];
+  const showDebugBilling = process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_BILLING_DEBUG === "true";
+  const awaitingSquare = subscription?.source === "SQUARE" && subscription.status === "PAUSED" && !subscription.squareSubscriptionId;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-7 sm:px-5 sm:py-10">
@@ -48,7 +58,8 @@ export default async function AccountPage() {
             <h2 className="text-xl font-bold text-white">Subscription</h2>
             <Badge tone={planCode === "FOUNDER" ? "gold" : "mana"}>{planCode === "FOUNDER" ? "Founder" : planCode}</Badge>
           </div>
-          <p className="mt-3 text-sm leading-6 text-zinc-300">Square checkout and webhook foundations are active. Billing portal management is still a placeholder until Square customer management is expanded.</p>
+          <p className="mt-3 text-sm leading-6 text-zinc-300">Square checkout is configured for one-time Founder purchases and recurring DM/Worldbuilder subscriptions. Access changes after Square confirms the payment or subscription webhook.</p>
+          {awaitingSquare ? <p className="mt-3 rounded-md border border-mana/25 bg-mana/10 p-2 text-sm text-mana">Checkout started. Waiting for Square to confirm the subscription webhook.</p> : null}
           {user.isFounder ? <p className="mt-3 rounded-md border border-aureate/20 bg-aureate/10 p-2 text-sm text-aureate">Max Tier / Lifetime Access</p> : null}
           <div className="mt-4 grid gap-2 text-sm text-zinc-300">
             <p>Status: <span className="text-white">{subscription?.status ?? "FREE"}</span></p>
@@ -57,6 +68,7 @@ export default async function AccountPage() {
             <p>Current period end: <span className="text-white">{subscription?.currentPeriodEnd ? subscription.currentPeriodEnd.toLocaleDateString() : "N/A"}</span></p>
             <p>Expires: <span className="text-white">{user.isFounder ? "Lifetime" : subscription?.expiresAt ? subscription.expiresAt.toLocaleDateString() : "N/A"}</span></p>
             <p>Square customer: <span className="text-white">{subscription?.squareCustomerId ? "Connected" : "Not connected"}</span></p>
+            {showDebugBilling && subscription?.squareSubscriptionId ? <p>Square subscription ID: <span className="break-all text-white">{subscription.squareSubscriptionId}</span></p> : null}
           </div>
           <Link className="mt-5 inline-flex rounded-md border border-aureate/30 px-4 py-3 text-sm font-semibold text-aureate hover:bg-aureate/10" href="/pricing">
             View planned tiers

@@ -1,5 +1,6 @@
 import type { SubscriptionPlanCode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getSquareConfig } from "@/lib/billing/square";
 
 export const defaultPlans: Record<SubscriptionPlanCode, { name: string; monthlyPriceCents: number; description: string; sortOrder: number }> = {
   FREE: { name: "Free", monthlyPriceCents: 0, description: "Player access, public browsing, and basic table tools.", sortOrder: 0 },
@@ -9,6 +10,7 @@ export const defaultPlans: Record<SubscriptionPlanCode, { name: string; monthlyP
 };
 
 export async function ensureSubscriptionPlans() {
+  const squareVariationIds = squarePlanVariationIds();
   return Promise.all(
     Object.entries(defaultPlans).map(([code, plan]) =>
       prisma.subscriptionPlan.upsert({
@@ -18,7 +20,8 @@ export async function ensureSubscriptionPlans() {
           description: plan.description,
           monthlyPriceCents: plan.monthlyPriceCents,
           active: true,
-          sortOrder: plan.sortOrder
+          sortOrder: plan.sortOrder,
+          squareVariationId: squareVariationIds[code as SubscriptionPlanCode] ?? undefined
         },
         create: {
           code: code as SubscriptionPlanCode,
@@ -27,12 +30,25 @@ export async function ensureSubscriptionPlans() {
           monthlyPriceCents: plan.monthlyPriceCents,
           active: true,
           sortOrder: plan.sortOrder,
+          squareVariationId: squareVariationIds[code as SubscriptionPlanCode] ?? undefined,
           features: {}
         }
       })
     )
   );
 }
+
+export function squarePlanVariationIds() {
+  const { environment } = getSquareConfig();
+  const prefix = environment === "production" ? "SQUARE_PRODUCTION" : "SQUARE_SANDBOX";
+  return {
+    FREE: undefined,
+    DM: process.env[`${prefix}_DM_PLAN_VARIATION_ID`] || process.env.SQUARE_DM_PLAN_VARIATION_ID || undefined,
+    WORLDBUILDER: process.env[`${prefix}_WORLDBUILDER_PLAN_VARIATION_ID`] || process.env.SQUARE_WORLDBUILDER_PLAN_VARIATION_ID || undefined,
+    FOUNDER: undefined
+  } satisfies Record<SubscriptionPlanCode, string | undefined>;
+}
+
 export function planCheckoutLabel(code: SubscriptionPlanCode) {
   if (code === "DM") return "Eternum DM monthly access";
   if (code === "WORLDBUILDER") return "Eternum Worldbuilder monthly access";

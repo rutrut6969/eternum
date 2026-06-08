@@ -15,8 +15,9 @@ import { milestoneForGameplayChange, professionMilestone } from "@/lib/milestone
 import { transitionSessionStatus } from "@/lib/sessions";
 import { buildCampaignTimeline } from "@/lib/timeline";
 import { maxImageSizeBytes, validateImageUpload } from "@/lib/uploads";
-import { getSquareConfig, verifySquareWebhookSignature } from "@/lib/billing/square";
+import { buildSquareSubscriptionCheckoutBody, getSquareConfig, verifySquareWebhookSignature } from "@/lib/billing/square";
 import { priceCraftedItem } from "@/lib/rules/pricing";
+import { squareSubscriptionStatusToEternum } from "@/lib/subscriptions/reconciliation";
 
 describe("campaign session transitions", () => {
   it("starts and completes sessions in order", () => {
@@ -315,5 +316,32 @@ describe("square billing helpers", () => {
 
     process.env.SQUARE_ENVIRONMENT = previousEnv;
     process.env.SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY = previousKey;
+  });
+
+  it("builds recurring subscription checkout links with a plan variation id", () => {
+    const body = buildSquareSubscriptionCheckoutBody({
+      locationId: "LOC_SANDBOX",
+      name: "Eternum DM monthly access",
+      amountCents: 999,
+      redirectUrl: "https://eternumvtt.com/dashboard/account?checkout=subscription_pending",
+      subscriptionPlanVariationId: "PLAN_VARIATION_DM",
+      metadata: { kind: "subscription", userId: "user_1", subscriptionId: "sub_1", planCode: "DM" }
+    });
+
+    expect(body.quick_pay.price_money).toEqual({ amount: 999, currency: "USD" });
+    expect(body.checkout_options).toMatchObject({
+      redirect_url: "https://eternumvtt.com/dashboard/account?checkout=subscription_pending",
+      subscription_plan_id: "PLAN_VARIATION_DM"
+    });
+    expect(body.metadata.kind).toBe("subscription");
+  });
+
+  it("maps Square subscription statuses without deleting local history", () => {
+    expect(squareSubscriptionStatusToEternum("ACTIVE")).toBe("ACTIVE");
+    expect(squareSubscriptionStatusToEternum("PAST_DUE")).toBe("PAST_DUE");
+    expect(squareSubscriptionStatusToEternum("PAUSED")).toBe("PAUSED");
+    expect(squareSubscriptionStatusToEternum("CANCELED")).toBe("CANCELED");
+    expect(squareSubscriptionStatusToEternum("DEACTIVATED")).toBe("EXPIRED");
+    expect(squareSubscriptionStatusToEternum("unknown")).toBe("PAUSED");
   });
 });

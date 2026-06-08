@@ -78,7 +78,9 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Subscription and billing schema foundation for `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, and `AIUsage`.
 - Subscription feature-gate service foundation with `canCreateCampaign()`, `canUseAdvancedAI()`, `canPublishPublicHomebrew()`, `canUseFutureMapGeneration()`, and `canUseFutureDiscordFeatures()`.
 - Founder/max-tier support with `isFounder`, `founderSince`, active Founder subscriptions, Founder badges, safe `npm run seed:founders`, and `npm run debug:user -- identifier`.
-- Square billing foundation with server-side environment selector, checkout route at `/api/billing/checkout`, donation checkout route at `/api/billing/donate`, webhook route at `/api/billing/square/webhook`, payment-link creation, webhook signature verification, billing events, marketplace purchase models, and entitlement grant foundation.
+- Square billing foundation with server-side environment selector, checkout route at `/api/billing/checkout`, donation checkout route at `/api/billing/donate`, webhook route at `/api/billing/square/webhook`, one-time payment links, recurring subscription checkout links, webhook signature verification, billing events, marketplace purchase models, and entitlement grant foundation.
+- DM and Worldbuilder pricing checkout now uses Square recurring subscription checkout with `checkout_options.subscription_plan_id` and plan variation IDs stored in `SubscriptionPlan.squareVariationId`; checkout redirects remain pending until Square webhooks confirm subscription state.
+- Founder checkout remains a one-time lifetime purchase path, separate from monthly subscriptions, and only grants founder access after a confirmed Square payment webhook.
 - Server-side gates now include `canAccessDmTools()` and are wired into campaign creation, advanced AI routes, and public homebrew publishing.
 - Monthly AI usage tracking is wired into backstory, spell, and item AI routes after authorization checks.
 - Registration usernames can auto-generate from Display Name, stop auto-updating after manual edits, and reset from display name on demand.
@@ -160,7 +162,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Dungeon Scrawl `.ds` import converts common JSON/project shapes for rooms, walls, doors, corridors, labels, and layers, but Dungeon Scrawl-specific advanced visuals, custom textures, and exact rendering parity are not guaranteed in v1.
 - AI map generation is blueprint-first: structured JSON generation and validation exist, but OpenAI image generation and generated Blob upload pipelines are intentionally not wired yet.
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
-- Subscription models, feature gates, pricing page, Square checkout, Founder lifetime checkout, donation checkout, webhook foundation, and AI usage tracking exist, but full Square subscription lifecycle sync, billing portal, invoices, refunds, and customer self-service are still partial.
+- Subscription models, feature gates, pricing page, Square recurring subscription checkout, Founder lifetime checkout, donation checkout, webhook foundation, checkout/order tracking, reconciliation helper, and AI usage tracking exist, but billing portal, invoices, refunds, cancellation self-service, and deeper Square lifecycle sync are still partial.
 - Homebrew spell/item builder routes are usable entry points, but rich field-level spell/item editors and post-save image-upload handoff are still basic.
 - Player-facing submission status trails are implemented for homebrew-backed spells/items/crafted-style content and backstory analysis, but dedicated tamed creature, undead servant, companion, and trait/flaw/affinity submission tables/forms are still planned.
 - Revision history exists for homebrew submissions, but a richer diff view and structured field-by-field amendment UI are still planned.
@@ -201,7 +203,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Uploaded map/live tabletop schema changes require `npm run db:push` to add `CampaignLiveState`, `MapFogState`, and expanded `MapToken` fields.
 - Dungeon Scrawl import schema changes require `npm run db:push` to add `MapSourceType.DUNGEON_SCRAWL` and import metadata fields.
 - Subscription/billing schema changes require `npm run db:push` on development databases.
-- Square checkout and webhook foundations are implemented, but production Square configuration, subscription catalog mapping, refunds, invoices, and customer portal management still need operational setup.
+- Square checkout and webhook foundations are implemented. DM/Worldbuilder require Square subscription plan variation IDs in the target environment, while production Square configuration, refunds, invoices, cancellation/self-service, and customer portal management still need operational setup.
 - `npm run seed:founders` is update-only and safe for passwords/data. It must be run against the database where the target user already exists.
 - Founder users can pass campaign member/DM checks through the shared campaign auth helper for administration and recovery access.
 - The full-screen map editor renders structured SVG elements with tactical styling and common object editing, but keyboard shortcut discoverability, image export, fog, lighting, player view, and token automation are future phases.
@@ -210,11 +212,11 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Unified assistant messages require `OPENAI_API_KEY` and currently use the existing advanced AI feature gate.
 - Assistant workflows are persisted as drafts, but submit-to-review/save-to-content actions are still future implementation work.
 - Wallet transfers require enough character balance and currently operate through API foundations; richer transfer/split UI and party treasury management screens are still planned.
-- Pricing checkout creates payment links, but full customer self-service, cancellation flows, refunds, and invoice history still need Square lifecycle polish.
+- Pricing checkout creates one-time Founder links and recurring DM/Worldbuilder subscription links, but full customer self-service, cancellation flows, refunds, and invoice history still need Square lifecycle polish.
 
 ## Next Recommended Steps
 
-1. Configure Square sandbox credentials and verify `/api/billing/checkout` creates DM, Worldbuilder, and Founder payment links.
+1. Configure Square sandbox credentials and Square subscription plan variation IDs, then verify `/api/billing/checkout` creates recurring DM/Worldbuilder subscription links and a one-time Founder payment link.
 2. Run `npm run seed:founders` in each environment after adding `FOUNDER_ACCOUNTS`, then verify with `npm run debug:user -- email-or-username`.
 3. Verify `/api/billing/donate` creates public donation payment links and confirms donations do not mutate subscription state.
 4. Add session detail pages for transcript, session memory, loot, encounters, and per-session notes.
@@ -222,7 +224,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 6. Add loot claim queue UI and pending inventory/currency approve/edit/reject actions.
 7. Add campaign player handout creation/reveal controls and player-private note surfaces.
 8. Add dedicated shell treatment for invite and verify-email standalone routes if they should share public chrome.
-9. Verify Square sandbox webhook payload metadata end-to-end and add deeper subscription lifecycle reconciliation.
+9. Verify Square sandbox webhook payload metadata end-to-end and expand subscription lifecycle reconciliation/cancellation self-service.
 10. Add active-route highlighting and richer notification detail views for the authenticated account menu.
 11. Add richer map editor interactions: drag handles, snap controls, layer reordering, labels editing, and image export.
 12. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
@@ -257,8 +259,11 @@ Open [http://localhost:3000](http://localhost:3000).
 - `FOUNDER_LIFETIME_PRICE_CENTS`: Optional Founder lifetime checkout price in cents. Defaults to `24900`.
 - `SQUARE_ENVIRONMENT`: `sandbox` or `production`.
 - `SQUARE_SANDBOX_ACCESS_TOKEN`, `SQUARE_SANDBOX_APPLICATION_ID`, `SQUARE_SANDBOX_LOCATION_ID`, `SQUARE_SANDBOX_WEBHOOK_SIGNATURE_KEY`: Square sandbox credentials.
+- `SQUARE_SANDBOX_DM_PLAN_VARIATION_ID`, `SQUARE_SANDBOX_WORLDBUILDER_PLAN_VARIATION_ID`: Square sandbox subscription plan variation IDs used for recurring DM and Worldbuilder checkout.
 - `SQUARE_PRODUCTION_ACCESS_TOKEN`, `SQUARE_PRODUCTION_APPLICATION_ID`, `SQUARE_PRODUCTION_LOCATION_ID`, `SQUARE_PRODUCTION_WEBHOOK_SIGNATURE_KEY`: Square production credentials.
+- `SQUARE_PRODUCTION_DM_PLAN_VARIATION_ID`, `SQUARE_PRODUCTION_WORLDBUILDER_PLAN_VARIATION_ID`: Square production subscription plan variation IDs used for recurring DM and Worldbuilder checkout.
 - `SQUARE_WEBHOOK_NOTIFICATION_URL`: Exact webhook URL registered in Square. Must match the URL used for signature verification.
+- `NEXT_PUBLIC_BILLING_DEBUG`: Optional local/debug flag to show Square subscription IDs in the account page. Keep `false` in production unless debugging.
 
 `EMAIL_VERIFICATION_PROVIDER` and `EMAIL_VERIFICATION_API_KEY` have been deprecated in favor of Resend verification links.
 
@@ -286,11 +291,12 @@ Founder seeding:
 
 1. Set `SQUARE_ENVIRONMENT=sandbox`.
 2. Add sandbox access token, application ID, location ID, and webhook signature key.
-3. Register `/api/billing/square/webhook` in Square and set `SQUARE_WEBHOOK_NOTIFICATION_URL` to the exact public URL.
-4. Set `FOUNDER_LIFETIME_PRICE_CENTS` if the Founder lifetime price should differ from `$249`.
-5. Use `/pricing` checkout buttons for DM, Worldbuilder, and Founder test payment links.
-6. Use `/donate` to verify no-account Square donations. Donations must remain separate from premium access and subscription state.
-7. Switch `SQUARE_ENVIRONMENT=production` only after production credentials and webhook URL are configured.
+3. Create Square subscription plan variations for DM and Worldbuilder in the same sandbox or production environment, then set `SQUARE_SANDBOX_DM_PLAN_VARIATION_ID` and `SQUARE_SANDBOX_WORLDBUILDER_PLAN_VARIATION_ID` or the matching production variables.
+4. Register `/api/billing/square/webhook` in Square and set `SQUARE_WEBHOOK_NOTIFICATION_URL` to the exact public URL.
+5. Set `FOUNDER_LIFETIME_PRICE_CENTS` if the Founder lifetime price should differ from `$249`.
+6. Use `/pricing` checkout buttons for recurring DM/Worldbuilder subscription checkout and one-time Founder checkout.
+7. Use `/donate` to verify no-account Square donations. Donations must remain one-time and separate from premium access and subscription state.
+8. Switch `SQUARE_ENVIRONMENT=production` only after production credentials, production plan variation IDs, and production webhook URL are configured.
 
 ## Account Rules
 
@@ -357,15 +363,15 @@ Production Resend delivery is temporarily optional while the sending domain is l
 ## Subscription and Billing Foundation
 
 - Planned tiers are `FREE`, `DM`, `WORLDBUILDER`, and `FOUNDER`.
-- `SubscriptionPlan` stores tier metadata, planned prices, sort order, and feature JSON.
-- `UserSubscription` stores the active user plan, status, start/expiry dates, `squareCustomerId`, and `squareSubscriptionId`.
+- `SubscriptionPlan` stores tier metadata, planned prices, sort order, feature JSON, and optional Square subscription plan variation IDs.
+- `UserSubscription` stores the active user plan, status, start/expiry dates, Square customer/subscription IDs, and Square checkout payment-link/order IDs for pending checkout reconciliation.
 - `User` stores `isFounder` and `founderSince` so Founder access remains fast and provider-independent.
 - `BillingEvent` stores future provider events and webhook payloads. Provider defaults to `square`.
 - `AIUsage` stores monthly request counts by user and month.
 - `subscriptionService` centralizes feature-gate decisions for campaign creation, advanced AI, public homebrew publishing, future map generation, and future Discord features.
 - Founder accounts are treated as the highest tier and pass all current/future premium gates, including DM tools, advanced AI, public publishing, future map generation, and future Discord/VTT premium features.
 - Run `npm run seed:founders` to promote existing accounts. The script never changes passwords, never recreates existing accounts, skips missing accounts, masks email output, and marks founder accounts verified.
-- Square checkout currently creates hosted payment links for DM, Worldbuilder, and Founder. The webhook route records Square events and promotes Founder when valid metadata is received, but full subscription reconciliation, billing portal support, invoices, refunds, and customer self-service remain planned.
+- Square checkout creates recurring hosted subscription links for DM and Worldbuilder using the Square subscription plan variation ID. Founder uses a separate one-time lifetime checkout. Redirect success is not treated as proof of access; Square webhooks and reconciliation update local subscription state.
 - Donations use a separate public Square payment-link route and intentionally do not grant premium access.
 - Stripe is intentionally not implemented.
 
@@ -401,7 +407,7 @@ npm run prisma:deploy
 
 Production should use a managed PostgreSQL database such as Neon, Supabase, Render, Railway, or Vercel Postgres.
 
-Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, `AIUsage`, `User.isFounder`, `User.founderSince`, `Map.sourceType`, `Map.blueprintVersion`, `Map.editorState`, `AssistantThread`, `AssistantMessage`, `AssistantWorkflow`, `SrdSource`, `SrdEntry`, `CharacterWallet`, `PartyTreasury`, and `CurrencyTransaction`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, founder access, AI usage tracking, editable map builder features, unified assistant features, SRD cache features, or currency wallets locally.
+Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, `AIUsage`, `User.isFounder`, `User.founderSince`, Square checkout tracking fields on `UserSubscription`, `Map.sourceType`, `Map.blueprintVersion`, `Map.editorState`, `AssistantThread`, `AssistantMessage`, `AssistantWorkflow`, `SrdSource`, `SrdEntry`, `CharacterWallet`, `PartyTreasury`, and `CurrencyTransaction`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, founder access, Square checkout reconciliation, AI usage tracking, editable map builder features, unified assistant features, SRD cache features, or currency wallets locally.
 
 ## Deployment
 
@@ -495,6 +501,10 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Founder subscriptions with database-stored lifetime source
 - [x] Square sandbox/production config helper
 - [x] Square checkout route and pricing buttons
+- [x] Square recurring subscription checkout for DM and Worldbuilder plan variation IDs
+- [x] One-time Founder lifetime checkout separated from recurring subscriptions
+- [x] Square checkout order/payment-link tracking on pending subscriptions
+- [x] Square subscription reconciliation helper
 - [x] Square webhook route with signature verification
 - [x] Marketplace purchase and entitlement schema foundation
 - [x] AI usage tracking schema and route increments
@@ -613,7 +623,7 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] AI map image generation and Blob save pipeline
 - [ ] Campaign UI for public map clone/import
 - [ ] Square production credential setup and live checkout verification
-- [ ] Full Square subscription lifecycle reconciliation
+- [ ] Square cancellation/self-service portal, invoice history, refunds, and deeper lifecycle reconciliation
 - [ ] Active route highlighting for workspace navigation
 - [ ] Editable account profile settings
 - [ ] Richer notification inbox/details

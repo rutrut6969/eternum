@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth/options";
 import { ensureSubscriptionPlans, planCheckoutLabel } from "@/lib/billing/plans";
-import { createSquarePaymentLink } from "@/lib/billing/square";
+import { createSquareOneTimePaymentLink, createSquareSubscriptionCheckoutLink } from "@/lib/billing/square";
 import { prisma } from "@/lib/prisma";
 import { subscriptionService } from "@/lib/subscriptions/service";
 
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const purchase = await prisma.marketplacePurchase.create({
       data: { userId, productId: product.id, status: "PENDING", amountCents: product.priceCents, currency: product.currency }
     });
-    const link = await createSquarePaymentLink({
+    const link = await createSquareOneTimePaymentLink({
       name: product.name,
       amountCents: product.priceCents,
       redirectUrl: `${appUrl}/dashboard/account?checkout=marketplace`,
@@ -78,21 +78,49 @@ export async function POST(request: Request) {
       startedAt: new Date()
     }
   });
-  const link = await createSquarePaymentLink({
-    name: planCheckoutLabel(plan.code),
-    amountCents: plan.monthlyPriceCents,
-    redirectUrl: `${appUrl}/dashboard/account?checkout=subscription`,
-    metadata: { kind: "subscription", userId, planId: plan.id, subscriptionId: pendingSubscription.id, planCode: plan.code }
+  const isRecurringPlan = plan.code === "DM" || plan.code === "WORLDBUILDER";
+  if (isRecurringPlan && !plan.squareVariationId) {
+    await prisma.userSubscription.update({ where: { id: pendingSubscription.id }, data: { status: "CANCELED" } });
+    return NextResponse.json({ error: `${plan.name} recurring checkout is missing a Square subscription plan variation ID.` }, { status: 500 });
+  }
+
+  const link = isRecurringPlan
+    ? await createSquareSubscriptionCheckoutLink({
+        name: planCheckoutLabel(plan.code),
+        amountCents: plan.monthlyPriceCents,
+        redirectUrl: `${appUrl}/dashboard/account?checkout=subscription_pending`,
+        subscriptionPlanVariationId: plan.squareVariationId!,
+        metadata: { kind: "subscription", userId, planId: plan.id, subscriptionId: pendingSubscription.id, planCode: plan.code }
+      })
+    : await createSquareOneTimePaymentLink({
+        name: planCheckoutLabel(plan.code),
+        amountCents: plan.monthlyPriceCents,
+        redirectUrl: `${appUrl}/dashboard/account?checkout=founder_pending`,
+        metadata: { kind: "founder_lifetime", userId, planId: plan.id, subscriptionId: pendingSubscription.id, planCode: plan.code }
+      });
+
+  await prisma.userSubscription.update({
+    where: { id: pendingSubscription.id },
+    data: {
+      squareCheckoutPaymentLinkId: link.payment_link.id,
+      squareCheckoutOrderId: link.payment_link.order_id
+    }
   });
 
   await prisma.billingEvent.create({
     data: {
       userId,
       userSubscriptionId: pendingSubscription.id,
-      type: "SUBSCRIPTION_CHECKOUT_CREATED",
+      type: plan.code === "FOUNDER" ? "CHECKOUT_CREATED" : "SUBSCRIPTION_CHECKOUT_CREATED",
       provider: "square",
       providerEventId: link.payment_link.id,
-      payload: { planCode: plan.code, checkoutUrl: link.payment_link.url, orderId: link.payment_link.order_id } as Prisma.InputJsonValue
+      payload: {
+        planCode: plan.code,
+        checkoutUrl: link.payment_link.url,
+        orderId: link.payment_link.order_id,
+        recurring: isRecurringPlan,
+        squareVariationId: plan.squareVariationId
+      } as Prisma.InputJsonValue
     }
   });
 

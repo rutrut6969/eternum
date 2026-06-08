@@ -46,7 +46,64 @@ export async function squareRequest<T>(path: string, init: RequestInit = {}) {
   return body as T;
 }
 
-export async function createSquarePaymentLink({
+export function buildSquareOneTimePaymentLinkBody({
+  locationId,
+  name,
+  amountCents,
+  redirectUrl,
+  metadata
+}: {
+  locationId: string;
+  name: string;
+  amountCents: number;
+  redirectUrl: string;
+  metadata: Record<string, string>;
+}) {
+  return {
+    idempotency_key: crypto.randomUUID(),
+    quick_pay: {
+      name,
+      price_money: { amount: amountCents, currency: "USD" },
+      location_id: locationId
+    },
+    checkout_options: { redirect_url: redirectUrl },
+    pre_populated_data: {},
+    metadata
+  };
+}
+
+export function buildSquareSubscriptionCheckoutBody({
+  locationId,
+  name,
+  amountCents,
+  redirectUrl,
+  subscriptionPlanVariationId,
+  metadata
+}: {
+  locationId: string;
+  name: string;
+  amountCents: number;
+  redirectUrl: string;
+  subscriptionPlanVariationId: string;
+  metadata: Record<string, string>;
+}) {
+  return {
+    idempotency_key: crypto.randomUUID(),
+    quick_pay: {
+      name,
+      price_money: { amount: amountCents, currency: "USD" },
+      location_id: locationId
+    },
+    checkout_options: {
+      redirect_url: redirectUrl,
+      subscription_plan_id: subscriptionPlanVariationId
+    },
+    pre_populated_data: {},
+    metadata
+  };
+}
+
+export async function createSquareOneTimePaymentLink({
   name,
   amountCents,
   redirectUrl,
@@ -60,18 +117,54 @@ export async function createSquarePaymentLink({
   const config = assertSquareCheckoutConfig();
   return squareRequest<{ payment_link: { id: string; url: string; order_id?: string } }>("/v2/online-checkout/payment-links", {
     method: "POST",
-    body: JSON.stringify({
-      idempotency_key: crypto.randomUUID(),
-      quick_pay: {
-        name,
-        price_money: { amount: amountCents, currency: "USD" },
-        location_id: config.locationId
-      },
-      checkout_options: { redirect_url: redirectUrl },
-      pre_populated_data: {},
-      metadata
-    })
+    body: JSON.stringify(buildSquareOneTimePaymentLinkBody({ locationId: config.locationId!, name, amountCents, redirectUrl, metadata }))
   });
+}
+
+export async function createSquareSubscriptionCheckoutLink({
+  name,
+  amountCents,
+  redirectUrl,
+  subscriptionPlanVariationId,
+  metadata
+}: {
+  name: string;
+  amountCents: number;
+  redirectUrl: string;
+  subscriptionPlanVariationId: string;
+  metadata: Record<string, string>;
+}) {
+  const config = assertSquareCheckoutConfig();
+  return squareRequest<{ payment_link: { id: string; url: string; order_id?: string } }>("/v2/online-checkout/payment-links", {
+    method: "POST",
+    body: JSON.stringify(
+      buildSquareSubscriptionCheckoutBody({
+        locationId: config.locationId!,
+        name,
+        amountCents,
+        redirectUrl,
+        subscriptionPlanVariationId,
+        metadata
+      })
+    )
+  });
+}
+
+export const createSquarePaymentLink = createSquareOneTimePaymentLink;
+
+export type SquareSubscriptionResponse = {
+  subscription?: {
+    id?: string;
+    customer_id?: string;
+    status?: string;
+    charged_through_date?: string;
+    canceled_date?: string;
+    plan_variation_id?: string;
+  };
+};
+
+export async function retrieveSquareSubscription(subscriptionId: string) {
+  return squareRequest<SquareSubscriptionResponse>(`/v2/subscriptions/${subscriptionId}`, { method: "GET" });
 }
 
 export function verifySquareWebhookSignature({

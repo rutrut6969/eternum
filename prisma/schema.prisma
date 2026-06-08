@@ -375,6 +375,8 @@ model UserSubscription {
   expiresAt            DateTime?
   squareCustomerId     String?
   squareSubscriptionId String?            @unique
+  squareCheckoutOrderId String?
+  squareCheckoutPaymentLinkId String?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
@@ -384,6 +386,8 @@ model UserSubscription {
 
   @@index([userId, status])
   @@index([planId])
+  @@index([squareCheckoutOrderId])
+  @@index([squareCheckoutPaymentLinkId])
 }
 
 model BillingEvent {
