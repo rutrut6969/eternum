@@ -78,6 +78,7 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Campaign workspace navigation should be mobile-friendly, using horizontal scroll tabs or a compact selector instead of forcing desktop tabs onto small screens.
 - Maps/VTT controls should be visible from the campaign workspace even while full VTT rendering, combat automation, fog, lighting, and player view remain future work.
 - Campaign cards should distinguish prep/admin manager entry points from live play/VTT entry points.
+- Map editor features should keep canonical geometry in `MapLayer.data`; editor UI may add selection, movement, resizing, rotation, history, viewport, and styling, but should not flatten editable maps into images.
 - Dice logs, activity feeds, approvals, notifications, and session logs should use internal scroll regions after a short visible list so pages do not grow without bound.
 - Handouts and player notes should be designed as live-table objects with visibility controls rather than loose public text.
 

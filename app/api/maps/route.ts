@@ -27,6 +27,8 @@ const mapCreateSchema = z.object({
   tags: z.array(z.string().min(1).max(40)).default([])
 });
 
+const defaultMapLayers = ["Terrain", "Structures", "Objects", "Lighting Notes", "Spawn Points", "DM Notes"];
+
 function valueOf(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -127,7 +129,7 @@ export async function POST(request: Request) {
       visibility: parsed.data.campaignId ? MapVisibility.CAMPAIGN_ONLY : MapVisibility.PRIVATE_USER,
       createdById: userId,
       tags: { create: parsed.data.tags.map((label) => ({ label })) },
-      layers: { create: [{ name: "Base", order: 0, data: { elements: [] } }] }
+      layers: { create: defaultMapLayers.map((name, order) => ({ name, order, visible: true, locked: false, data: { elements: [] } })) }
     },
     include: { tags: true, layers: true }
   });

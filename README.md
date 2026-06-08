@@ -96,6 +96,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Member role editing, invite creation/copy links, and campaign settings now live inside the dedicated campaign workspace instead of the campaign launcher.
 - VTT campaign panel now displays map images, descriptions, tags, grid/status badges, AI-image badges, visible empty states, and lets DMs attach new map records to either the campaign or a specific session.
 - Editable map builder foundation with `/dashboard/maps/new` and `/dashboard/maps/[mapId]/edit`, using SVG grid rendering and structured `MapLayer.data` rather than flat images.
+- Map editor Phase 2 usability pass with selection, Shift+Click multi-select, drag/move, arrow-key nudging, room drag creation, straight wall/corridor creation, resize handles, rotation, duplicate/delete, undo/redo, zoom controls, grid toggle, styled terrain patterns, layer controls, and an editable properties panel.
 - Map source tracking now supports manual maps, AI blueprint drafts, uploaded image maps, and hybrid AI/manual workflows through `MapSourceType`.
 - AI map blueprint route at `/api/ai/map-blueprint` generates strict JSON map blueprints, validates grid bounds and layer data, and can save validated drafts as editable map records.
 - Map blueprint utilities validate rooms, corridors, walls, doors, windows, stairs, terrain, obstacles, lighting notes, spawn points, secret areas, labels, and DM notes before save.
@@ -140,7 +141,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Session notes support markdown storage and mobile display, but there is no rich markdown editor or sanitizer yet.
 - Activity feed is persisted and displayed, but realtime delivery is still only an abstraction.
 - Campaign play mode exposes maps/VTT, dice, character list, notes/handouts, and session activity, but token movement, fog of war, combat automation, player view separation, and handout reveal controls are still planned.
-- VTT data models and a first editable map renderer exist, but drag/drop, move/resize/rotate, duplicate, multi-select, snap controls, richer layers, doors/windows/stairs/furniture/lights, token automation, fog of war, dynamic lighting, and combat UI are intentionally not implemented.
+- VTT data models and a Phase 2 editable map renderer exist, but precision drag handles beyond rectangles, rich furniture assets, token automation, fog of war, dynamic lighting, realtime collaboration, player view separation, and combat UI are intentionally not implemented.
 - AI map generation is blueprint-first: structured JSON generation and validation exist, but OpenAI image generation and generated Blob upload pipelines are intentionally not wired yet.
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
 - Subscription models, feature gates, pricing page, Square checkout, Founder lifetime checkout, donation checkout, webhook foundation, and AI usage tracking exist, but full Square subscription lifecycle sync, billing portal, invoices, refunds, and customer self-service are still partial.
@@ -182,7 +183,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Square checkout and webhook foundations are implemented, but production Square configuration, subscription catalog mapping, refunds, invoices, and customer portal management still need operational setup.
 - `npm run seed:founders` is update-only and safe for passwords/data. It must be run against the database where the target user already exists.
 - Founder users can pass campaign member/DM checks through the shared campaign auth helper for administration and recovery access.
-- The v1 map editor renders structured SVG elements and can add/erase basic element types, but precision drag handles, keyboard shortcuts, image export, fog, lighting, player view, and token automation are future phases.
+- The Phase 2 map editor renders structured SVG elements with tactical styling and common object editing, but keyboard shortcut discoverability, image export, fog, lighting, player view, and token automation are future phases.
+- The Phase 2 map editor now supports object selection, movement, resizing, rotation, duplication, deletion, undo/redo, zoom controls, terrain styling, layer management, and properties editing, but mobile remains a simplified/light-edit experience.
 - AI map blueprints require `OPENAI_API_KEY` and a plan that passes `canUseFutureMapGeneration()`.
 - Unified assistant messages require `OPENAI_API_KEY` and currently use the existing advanced AI feature gate.
 - Assistant workflows are persisted as drafts, but submit-to-review/save-to-content actions are still future implementation work.
@@ -493,6 +495,7 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] AI map blueprint route
 - [x] Map blueprint validation and layer conversion utilities
 - [x] Structured SVG map renderer foundation
+- [x] Map editor Phase 2 selection, movement, resizing, rotation, layers, history, zoom, and visual styling
 - [x] Unified assistant schema for threads, messages, and workflows
 - [x] Persistent dashboard assistant launcher
 - [x] Assistant workspace route

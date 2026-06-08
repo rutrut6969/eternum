@@ -38,9 +38,12 @@ export const mapElementSchema = z.object({
   position: pointSchema.optional(),
   terrainType: z.string().max(60).optional(),
   orientation: z.enum(["north", "east", "south", "west"]).optional(),
+  rotation: z.number().default(0).optional(),
   open: z.boolean().optional(),
   locked: z.boolean().optional(),
   secret: z.boolean().optional(),
+  blocksMovement: z.boolean().optional(),
+  blocksVision: z.boolean().optional(),
   note: z.string().max(1000).optional(),
   label: z.string().max(120).optional(),
   visibility: z.enum(mapNoteVisibilities).default("DM_ONLY"),
@@ -153,4 +156,3 @@ export function createBlankMapBlueprint({
     suggestedEncounters: []
   };
 }
-
