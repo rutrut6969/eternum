@@ -33,6 +33,42 @@ type CharacterGameplay = {
   tamedCreatures: unknown[];
   undeadServants: unknown[];
   professionLevels: Array<{ profession: string; level: number; xp: number }>;
+  backstoryAnalyses?: Array<{ id: string; status: string; dmNotes: string | null; createdAt: string; reviewedAt: string | null }>;
+  submissions?: CharacterSubmission[];
+};
+
+type CharacterSubmission = {
+  id: string;
+  type: string;
+  title: string;
+  summary: string | null;
+  status: string;
+  visibility: string;
+  rarity: string | null;
+  discipline: string | null;
+  body: unknown;
+  rulesResult: unknown;
+  generatedByAi: boolean;
+  campaignId: string | null;
+  campaignName: string | null;
+  characterId: string | null;
+  characterName: string | null;
+  submittedAt: string;
+  reviewedAt: string | null;
+  reviewedByName: string | null;
+  dmFeedback: string | null;
+  updatedAt: string;
+  currentRevisionId: string | null;
+  currentRevisionNumber: number | null;
+  revisions: Array<{
+    id: string;
+    revisionNumber: number;
+    submittedAt: string;
+    dmFeedback: string | null;
+    dmDecision: string | null;
+    reviewedAt: string | null;
+    reviewedByName: string | null;
+  }>;
 };
 
 const editorFields: Array<{ field: GameplayField; label: string; placeholder: string }> = [
@@ -65,6 +101,159 @@ function summaryOf(value: unknown) {
 function imageOf(value: unknown) {
   const record = toRecord(value);
   return typeof record.imageUrl === "string" ? record.imageUrl : "";
+}
+
+function statusLabel(status: string) {
+  const labels: Record<string, string> = {
+    DRAFT: "Draft",
+    PENDING_DM_REVIEW: "Pending Approval",
+    NEEDS_CHANGES: "Edits Requested",
+    REJECTED: "DM Denied",
+    APPROVED_PRIVATE: "DM Approved",
+    APPROVED_PUBLIC: "Approved Public",
+    ARCHIVED: "Archived"
+  };
+  return labels[status] ?? status.replace(/_/g, " ");
+}
+
+function statusTone(status: string): "gold" | "mana" | "violet" | "stamina" | "crimson" {
+  if (status === "APPROVED_PRIVATE" || status === "APPROVED_PUBLIC") return "stamina";
+  if (status === "PENDING_DM_REVIEW") return "gold";
+  if (status === "NEEDS_CHANGES") return "mana";
+  if (status === "REJECTED") return "crimson";
+  return "violet";
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "Not reviewed";
+  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function bodyRecord(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function isCraftedSubmission(submission: CharacterSubmission) {
+  const body = bodyRecord(submission.body);
+  return submission.type === "CRAFTING_RECIPE" || body.source === "crafted" || Boolean(body.craftingRequirements) || Boolean(body.materials);
+}
+
+function submissionsForField(field: GameplayField, submissions: CharacterSubmission[]) {
+  return submissions.filter((submission) => {
+    if (field === "customSpells") return submission.type === "CUSTOM_SPELL";
+    if (field === "inventory") return submission.type === "CUSTOM_ITEM" && !isCraftedSubmission(submission);
+    if (field === "craftedItems") return (submission.type === "CUSTOM_ITEM" && isCraftedSubmission(submission)) || submission.type === "CRAFTING_RECIPE";
+    if (field === "traits" || field === "flaws" || field === "affinities") return submission.type === "PROFESSION_PERK" || submission.type === "MAGICAL_DISCIPLINE";
+    if (field === "undeadServants" || field === "tamedCreatures") return submission.type === "MONSTER_NPC";
+    return false;
+  });
+}
+
+function SubmissionStatusCard({ submission, onSaved }: { submission: CharacterSubmission; onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(submission.title);
+  const [summary, setSummary] = useState(submission.summary ?? "");
+  const [bodyText, setBodyText] = useState(JSON.stringify(submission.body ?? {}, null, 2));
+  const [message, setMessage] = useState<string | null>(null);
+  const canRevise = submission.status === "NEEDS_CHANGES" || submission.status === "REJECTED" || submission.status === "DRAFT";
+
+  async function resubmit() {
+    setMessage(null);
+    let parsedBody: Record<string, unknown>;
+    try {
+      parsedBody = JSON.parse(bodyText) as Record<string, unknown>;
+    } catch {
+      setMessage("Body must be valid JSON before resubmitting.");
+      return;
+    }
+    const response = await fetch(`/api/homebrew/${submission.id}/resubmit`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        summary,
+        body: parsedBody,
+        rarity: submission.rarity ?? undefined,
+        discipline: submission.discipline ?? undefined
+      })
+    });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      setMessage(body?.error || "Could not resubmit.");
+      return;
+    }
+    setMessage("Revision submitted for DM approval.");
+    setEditing(false);
+    onSaved();
+  }
+
+  return (
+    <div className="rounded-md border border-white/10 bg-black/25 p-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap gap-2">
+            <Badge tone={statusTone(submission.status)}>{statusLabel(submission.status)}</Badge>
+            <Badge tone="violet">Revision {submission.currentRevisionNumber ?? 1}</Badge>
+            {submission.generatedByAi ? <Badge tone="mana">AI draft</Badge> : null}
+          </div>
+          <h4 className="mt-2 font-semibold text-white">{submission.title}</h4>
+          <p className="mt-1 text-xs text-zinc-500">
+            {submission.campaignName || "Private"} / {submission.characterName || "No character"} / Submitted {formatDate(submission.submittedAt)} / Updated {formatDate(submission.updatedAt)}
+          </p>
+          {submission.summary ? <p className="mt-2 text-sm text-zinc-300">{submission.summary}</p> : null}
+        </div>
+        <button className="rounded-md border border-white/10 px-3 py-2 text-sm font-semibold text-zinc-200" onClick={() => setOpen((value) => !value)} type="button">
+          {open ? "Hide details" : "View status"}
+        </button>
+      </div>
+      {open ? (
+        <div className="mt-3 grid gap-3">
+          {submission.dmFeedback ? (
+            <div className="rounded-md border border-aureate/20 bg-aureate/10 p-3 text-sm text-aureate">
+              <p className="font-semibold">{statusLabel(submission.status)}{submission.reviewedByName ? ` by ${submission.reviewedByName}` : ""}</p>
+              <p className="mt-1 leading-6">{submission.dmFeedback}</p>
+              <p className="mt-2 text-xs text-aureate/75">Reviewed {formatDate(submission.reviewedAt)}</p>
+            </div>
+          ) : (
+            <p className="rounded-md border border-white/10 bg-black/20 p-3 text-sm text-zinc-400">No DM feedback yet.</p>
+          )}
+          <details className="rounded-md border border-white/10 bg-black/20 p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-zinc-200">Revision history</summary>
+            <div className="mt-3 grid gap-2">
+              {submission.revisions.map((revision) => (
+                <div key={revision.id} className="rounded border border-white/10 bg-black/25 p-2 text-xs text-zinc-300">
+                  <p className="font-semibold text-white">Revision {revision.revisionNumber} / Submitted {formatDate(revision.submittedAt)}</p>
+                  {revision.dmDecision ? <p className="mt-1">{statusLabel(revision.dmDecision)} / {revision.reviewedByName || "DM"} / {formatDate(revision.reviewedAt)}</p> : null}
+                  {revision.dmFeedback ? <p className="mt-1 text-aureate">{revision.dmFeedback}</p> : null}
+                </div>
+              ))}
+            </div>
+          </details>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <pre className="max-h-52 overflow-auto rounded-md border border-white/10 bg-black/30 p-3 text-xs text-zinc-300">{JSON.stringify(submission.body, null, 2)}</pre>
+            <pre className="max-h-52 overflow-auto rounded-md border border-white/10 bg-black/30 p-3 text-xs text-zinc-300">{JSON.stringify(submission.rulesResult, null, 2)}</pre>
+          </div>
+          {canRevise ? (
+            <div className="rounded-md border border-mana/20 bg-mana/10 p-3">
+              <button className="rounded-md border border-mana/30 px-3 py-2 text-sm font-semibold text-mana" onClick={() => setEditing((value) => !value)} type="button">
+                {editing ? "Cancel revision" : "Revise and resubmit"}
+              </button>
+              {editing ? (
+                <div className="mt-3 grid gap-2">
+                  <input className="rounded-md border border-white/10 bg-black/30 px-3 py-3 text-white" value={title} onChange={(event) => setTitle(event.target.value)} />
+                  <textarea className="min-h-24 rounded-md border border-white/10 bg-black/30 p-3 text-white" value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="Summary" />
+                  <textarea className="min-h-48 rounded-md border border-white/10 bg-black/30 p-3 font-mono text-xs text-white" value={bodyText} onChange={(event) => setBodyText(event.target.value)} />
+                  {message ? <p className="rounded-md border border-white/10 bg-black/25 p-2 text-sm text-mana">{message}</p> : null}
+                  <button className="rounded-md bg-mana px-4 py-3 font-semibold text-void" onClick={resubmit} type="button">Submit revised version</button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function GameplayEditors({ character }: { character: CharacterGameplay }) {
@@ -186,6 +375,33 @@ export function GameplayEditors({ character }: { character: CharacterGameplay })
         </div>
       </Card>
 
+      <Card>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-white">Backstory / Character Development</h3>
+            <p className="mt-1 text-sm text-zinc-400">AI backstory suggestions and DM feedback stay visible here.</p>
+          </div>
+          <Badge tone="violet">{character.backstoryAnalyses?.length ?? 0}</Badge>
+        </div>
+        <div className="mt-4 grid gap-3">
+          {character.backstoryAnalyses?.length ? null : <p className="text-sm text-zinc-400">No backstory suggestions submitted yet.</p>}
+          {character.backstoryAnalyses?.map((analysis) => (
+            <div key={analysis.id} className="rounded-md border border-white/10 bg-black/25 p-3">
+              <div className="flex flex-wrap gap-2">
+                <Badge tone={statusTone(analysis.status)}>{statusLabel(analysis.status)}</Badge>
+                <Badge tone="violet">Submitted {formatDate(analysis.createdAt)}</Badge>
+              </div>
+              {analysis.dmNotes ? (
+                <p className="mt-3 rounded-md border border-aureate/20 bg-aureate/10 p-3 text-sm leading-6 text-aureate">{analysis.dmNotes}</p>
+              ) : (
+                <p className="mt-3 text-sm text-zinc-400">No DM feedback yet.</p>
+              )}
+              <p className="mt-2 text-xs text-zinc-500">Reviewed {formatDate(analysis.reviewedAt)}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       <div className="grid gap-5 xl:grid-cols-2">
         {editorFields.map(({ field, label, placeholder }) => (
           <Card key={field}>
@@ -232,6 +448,24 @@ export function GameplayEditors({ character }: { character: CharacterGameplay })
                 </div>
               ))}
             </div>
+            {submissionsForField(field, character.submissions ?? []).length ? (
+              <div className="mt-5 border-t border-white/10 pt-4">
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 className="font-bold text-white">
+                      {field === "customSpells" ? "Pending Spell Submissions" : field === "inventory" ? "Pending Item Submissions" : field === "craftedItems" ? "Crafting Submission History" : "Pending Suggestions"}
+                    </h4>
+                    <p className="mt-1 text-xs text-zinc-500">Submitted content remains visible through approval, denial, edits, and final use.</p>
+                  </div>
+                  <Badge tone="gold">{submissionsForField(field, character.submissions ?? []).length}</Badge>
+                </div>
+                <div className="grid gap-3">
+                  {submissionsForField(field, character.submissions ?? []).map((submission) => (
+                    <SubmissionStatusCard key={submission.id} submission={submission} onSaved={() => router.refresh()} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </Card>
         ))}
       </div>

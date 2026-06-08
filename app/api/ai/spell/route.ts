@@ -6,6 +6,7 @@ import { getOpenAIClient, openAIModel } from "@/lib/ai/openai";
 import { authOptions } from "@/lib/auth/options";
 import { requireCampaignMember } from "@/lib/campaign-auth";
 import { slugForHomebrew } from "@/lib/homebrew";
+import { createHomebrewRevision, homebrewSubmissionSnapshot } from "@/lib/homebrew-submissions";
 import { prisma } from "@/lib/prisma";
 import { calculateInfusedSpell, deriveTierFromMana } from "@/lib/rules/spells";
 import { recordAIUsage, subscriptionService } from "@/lib/subscriptions/service";
@@ -55,21 +56,31 @@ export async function POST(request: Request) {
   };
 
   const title = String(formatted.name || "Custom Spell");
-  const homebrew = await prisma.homebrewContent.create({
-    data: {
-      type: "CUSTOM_SPELL",
-      title,
-      slug: slugForHomebrew(title),
-      summary: String(formatted.baseEffect || parsed.data.idea).slice(0, 500),
-      body: { ...formatted, characterId: parsed.data.characterId, baseManaIntent: parsed.data.baseManaIntent },
-      rulesResult: rules,
-      discipline: formatted.discipline ? String(formatted.discipline) : undefined,
-      status: parsed.data.submitForReview ? "PENDING_DM_REVIEW" : "DRAFT",
-      visibility: parsed.data.campaignId ? "CAMPAIGN_ONLY" : "PRIVATE_USER",
-      campaignId: parsed.data.campaignId,
-      authorId: userId,
-      generatedByAi: true
-    }
+  const homebrew = await prisma.$transaction(async (tx) => {
+    const created = await tx.homebrewContent.create({
+      data: {
+        type: "CUSTOM_SPELL",
+        title,
+        slug: slugForHomebrew(title),
+        summary: String(formatted.baseEffect || parsed.data.idea).slice(0, 500),
+        body: { ...formatted, characterId: parsed.data.characterId, baseManaIntent: parsed.data.baseManaIntent },
+        rulesResult: rules,
+        discipline: formatted.discipline ? String(formatted.discipline) : undefined,
+        status: parsed.data.submitForReview ? "PENDING_DM_REVIEW" : "DRAFT",
+        visibility: parsed.data.campaignId ? "CAMPAIGN_ONLY" : "PRIVATE_USER",
+        campaignId: parsed.data.campaignId,
+        characterId: parsed.data.characterId,
+        submittedAt: parsed.data.submitForReview ? new Date() : undefined,
+        authorId: userId,
+        generatedByAi: true
+      }
+    });
+    await createHomebrewRevision(tx, {
+      homebrewId: created.id,
+      submittedById: userId,
+      snapshot: homebrewSubmissionSnapshot(created)
+    });
+    return tx.homebrewContent.findUniqueOrThrow({ where: { id: created.id } });
   });
 
   return NextResponse.json({ formatted, rules, homebrew, approvalRequired: true });

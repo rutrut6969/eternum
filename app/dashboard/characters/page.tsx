@@ -44,21 +44,35 @@ export default async function CharactersPage() {
       campaignId: { in: dmCampaignIds }
     },
     include: {
-      author: { select: { name: true, username: true, email: true } }
+      author: { select: { name: true, username: true, email: true } },
+      character: { select: { id: true, name: true } },
+      campaign: { select: { id: true, name: true } },
+      revisions: { orderBy: { revisionNumber: "desc" }, take: 1, include: { reviewedBy: { select: { name: true, username: true } } } }
     },
     orderBy: { updatedAt: "desc" }
   });
   const myHomebrew = await prisma.homebrewContent.findMany({
     where: { authorId: user.id },
+    include: {
+      campaign: { select: { id: true, name: true } },
+      character: { select: { id: true, name: true } },
+      reviewedBy: { select: { name: true, username: true } },
+      revisions: { orderBy: { revisionNumber: "desc" }, take: 6, include: { reviewedBy: { select: { name: true, username: true } } } }
+    },
     orderBy: { updatedAt: "desc" },
-    take: 20
+    take: 60
   });
   const campaignOptions = memberships.map((membership) => ({
     id: membership.campaign.id,
     name: membership.campaign.name,
     roles: membership.roles
   }));
-  const characterSummaries = characters.map((character) => ({
+  const characterSummaries = characters.map((character) => {
+    const submissions = myHomebrew.filter((item) => {
+      const body = item.body && typeof item.body === "object" && !Array.isArray(item.body) ? item.body as Record<string, unknown> : {};
+      return item.characterId === character.id || String(body.characterId ?? "") === character.id;
+    });
+    return {
     id: character.id,
     campaignId: character.campaignId,
     name: character.name,
@@ -83,9 +97,43 @@ export default async function CharactersPage() {
     tamedCreatures: Array.isArray(character.tamedCreatures) ? character.tamedCreatures : [],
     undeadServants: Array.isArray(character.undeadServants) ? character.undeadServants : [],
     professionLevels: character.professionLevels.map((profession) => ({ profession: profession.profession, level: profession.level, xp: profession.xp })),
-    backstoryAnalyses: character.backstoryAnalyses.map((analysis) => ({ id: analysis.id, status: analysis.status, dmNotes: analysis.dmNotes })),
-    milestones: character.milestones.map((milestone) => ({ id: milestone.id, title: milestone.title, type: milestone.type, createdAt: milestone.createdAt.toISOString() }))
-  }));
+    backstoryAnalyses: character.backstoryAnalyses.map((analysis) => ({ id: analysis.id, status: analysis.status, dmNotes: analysis.dmNotes, createdAt: analysis.createdAt.toISOString(), reviewedAt: analysis.reviewedAt?.toISOString() ?? null })),
+    milestones: character.milestones.map((milestone) => ({ id: milestone.id, title: milestone.title, type: milestone.type, createdAt: milestone.createdAt.toISOString() })),
+    submissions: submissions.map((item) => ({
+      id: item.id,
+      type: item.type,
+      title: item.title,
+      summary: item.summary,
+      status: item.status,
+      visibility: item.visibility,
+      rarity: item.rarity,
+      discipline: item.discipline,
+      body: item.body,
+      rulesResult: item.rulesResult,
+      generatedByAi: item.generatedByAi,
+      campaignId: item.campaignId,
+      campaignName: item.campaign?.name ?? null,
+      characterId: item.characterId,
+      characterName: item.character?.name ?? character.name,
+      submittedAt: item.submittedAt?.toISOString() ?? item.createdAt.toISOString(),
+      reviewedAt: item.reviewedAt?.toISOString() ?? null,
+      reviewedByName: item.reviewedBy?.name || item.reviewedBy?.username || null,
+      dmFeedback: item.dmFeedback,
+      updatedAt: item.updatedAt.toISOString(),
+      currentRevisionId: item.currentRevisionId,
+      currentRevisionNumber: item.revisions[0]?.revisionNumber ?? null,
+      revisions: item.revisions.map((revision) => ({
+        id: revision.id,
+        revisionNumber: revision.revisionNumber,
+        submittedAt: revision.submittedAt.toISOString(),
+        dmFeedback: revision.dmFeedback,
+        dmDecision: revision.dmDecision,
+        reviewedAt: revision.reviewedAt?.toISOString() ?? null,
+        reviewedByName: revision.reviewedBy?.name || revision.reviewedBy?.username || null
+      }))
+    }))
+  };
+  });
   const pendingSummaries = pendingAnalyses.map((analysis) => ({
     id: analysis.id,
     status: analysis.status,
@@ -105,6 +153,12 @@ export default async function CharactersPage() {
     imageAltText: item.imageAltText,
     body: item.body,
     rulesResult: item.rulesResult,
+    generatedByAi: item.generatedByAi,
+    campaign: item.campaign,
+    character: item.character,
+    submittedAt: item.submittedAt?.toISOString() ?? item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+    currentRevisionNumber: item.revisions[0]?.revisionNumber ?? null,
     author: item.author
   }));
   const myHomebrewSummaries = myHomebrew.map((item) => ({
@@ -116,7 +170,15 @@ export default async function CharactersPage() {
     visibility: item.visibility,
     publishRequestedAt: item.publishRequestedAt?.toISOString() ?? null,
     imageUrl: item.imageUrl,
-    imageAltText: item.imageAltText
+    imageAltText: item.imageAltText,
+    campaignName: item.campaign?.name ?? null,
+    characterName: item.character?.name ?? null,
+    submittedAt: item.submittedAt?.toISOString() ?? item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+    reviewedAt: item.reviewedAt?.toISOString() ?? null,
+    reviewedByName: item.reviewedBy?.name || item.reviewedBy?.username || null,
+    dmFeedback: item.dmFeedback,
+    currentRevisionNumber: item.revisions[0]?.revisionNumber ?? null
   }));
 
   return (

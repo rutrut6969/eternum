@@ -34,8 +34,43 @@ type CharacterSummary = {
   tamedCreatures: unknown[];
   undeadServants: unknown[];
   professionLevels: Array<{ profession: string; level: number; xp: number }>;
-  backstoryAnalyses: Array<{ id: string; status: string; dmNotes: string | null }>;
+  backstoryAnalyses: Array<{ id: string; status: string; dmNotes: string | null; createdAt: string; reviewedAt: string | null }>;
   milestones: Array<{ id: string; title: string; type: string; createdAt: string }>;
+  submissions: CharacterSubmission[];
+};
+
+type CharacterSubmission = {
+  id: string;
+  type: string;
+  title: string;
+  summary: string | null;
+  status: string;
+  visibility: string;
+  rarity: string | null;
+  discipline: string | null;
+  body: unknown;
+  rulesResult: unknown;
+  generatedByAi: boolean;
+  campaignId: string | null;
+  campaignName: string | null;
+  characterId: string | null;
+  characterName: string | null;
+  submittedAt: string;
+  reviewedAt: string | null;
+  reviewedByName: string | null;
+  dmFeedback: string | null;
+  updatedAt: string;
+  currentRevisionId: string | null;
+  currentRevisionNumber: number | null;
+  revisions: Array<{
+    id: string;
+    revisionNumber: number;
+    submittedAt: string;
+    dmFeedback: string | null;
+    dmDecision: string | null;
+    reviewedAt: string | null;
+    reviewedByName: string | null;
+  }>;
 };
 
 export function CharacterWorkbench({ campaigns, characters }: { campaigns: CampaignOption[]; characters: CharacterSummary[] }) {

@@ -63,6 +63,11 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Image storage foundation is prepared through `imageUrl`, `imagePrompt`, `imageAltText`, `generatedByAi`, and Blob token configuration.
 - Homebrew images render on item/homebrew cards, approval cards, character inventory cards, and public library cards.
 - Homebrew approval queue now supports custom spells, custom items, crafted-item style content, and publish requests with approve private, approve public, reject, request edits, and archive actions.
+- Player submission lifecycle is now visible for character-linked custom spells, custom items, crafted-style submissions, and backstory suggestions, with player-facing Draft, Pending Approval, Edits Requested, DM Denied, DM Approved, and Archived status badges.
+- Homebrew submissions now store linked character/campaign metadata, submitted/reviewed timestamps, reviewing DM, DM feedback, current revision, and revision history through `HomebrewRevision`.
+- DM review actions require feedback for deny and request-edits decisions, preserve the decision on the current revision, and keep the submission visible to the player.
+- Players can revise and resubmit denied, edit-requested, or draft homebrew submissions without overwriting prior revision history.
+- Approved custom spells automatically attach to the character custom spell list and create a spell-learning milestone; approved custom items attach to inventory/crafted history and create an item milestone.
 - Publish-to-public flow allows authors to request public publication after private approval and lets DMs confirm publication.
 - Public library is database-backed and only shows `APPROVED_PUBLIC` content with `PUBLIC_LIBRARY` visibility.
 - Public library filters include content type, rarity, discipline, profession requirement, creator, campaign source, and name/description search.
@@ -154,6 +159,8 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
 - Subscription models, feature gates, pricing page, Square checkout, Founder lifetime checkout, donation checkout, webhook foundation, and AI usage tracking exist, but full Square subscription lifecycle sync, billing portal, invoices, refunds, and customer self-service are still partial.
 - Homebrew spell/item builder routes are usable entry points, but rich field-level spell/item editors and post-save image-upload handoff are still basic.
+- Player-facing submission status trails are implemented for homebrew-backed spells/items/crafted-style content and backstory analysis, but dedicated tamed creature, undead servant, companion, and trait/flaw/affinity submission tables/forms are still planned.
+- Revision history exists for homebrew submissions, but a richer diff view and structured field-by-field amendment UI are still planned.
 - Unified assistant stores structured drafts and workflow state, but it does not yet convert assistant workflows directly into saved homebrew, characters, NPCs, monsters, quests, handouts, compendiums, or DM review submissions.
 - Currency wallets, transfers, manual loot event records, and pending inventory/currency update schema exist, but rich loot claim queues, edit/approve/reject UI, listener-driven loot detection, and auto-approval settings are still planned.
 - Voice/NPC roleplay/listener records and service abstractions are foundations only; no live transcription or text-to-speech provider is configured yet.
@@ -177,6 +184,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Campaign archive is a soft delete via `archivedAt`.
 - Existing development databases with users may need a migration/backfill strategy before making `username` required in production.
 - Existing development databases need `npm run db:push` after this pass to add homebrew metadata columns.
+- Submission lifecycle schema changes require `npm run db:push` to add `HomebrewRevision` and nullable homebrew submission metadata fields.
 - Public library profession filtering currently filters JSON requirements in application code after fetching approved public records.
 - Public library search intentionally avoids Prisma JSON filtering and relation/fuzzy filters in the database query; creator/campaign/profession/search filters run in application code after fetching approved public records.
 - Resend requires a verified sending domain for production email delivery.
@@ -466,6 +474,10 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Manual and AI homebrew item builder foundation
 - [x] Homebrew rules metadata for spells/items
 - [x] Homebrew approval queue beyond backstory
+- [x] Player-visible submission status trail for character-linked custom spells/items/crafted-style content
+- [x] Homebrew revision history model and resubmission API
+- [x] DM feedback requirement for deny/request-edit decisions
+- [x] Approved homebrew-to-character gameplay attachment for spells/items
 - [x] Publish-to-public request and DM confirmation flow
 - [x] Public library database search and filters
 - [x] Public library safe Prisma query and friendly error fallback
@@ -573,6 +585,8 @@ Do not run deployment watch commands until the Vercel project is linked.
 
 - [ ] Campaign invite email delivery
 - [ ] Rich spellbook and item detail editors
+- [ ] Rich submission diff view and structured field-by-field amendment UI
+- [ ] Dedicated tamed creature, undead servant, trait/flaw/affinity submission workflows
 - [ ] Advanced homebrew balance validation
 - [ ] Realtime transport behind event bus
 - [ ] Rich markdown editor and sanitization for notes
@@ -620,6 +634,7 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [ ] Realtime dice/activity updates
 - [ ] Auth validation test suite
 - [ ] Homebrew workflow test suite
+- [ ] Route-level submission lifecycle tests for create, deny, amend, resubmit, and approve
 - [ ] Rules engine test suite
 - [ ] Homebrew item image generation support
 - [ ] Vercel deployment verification

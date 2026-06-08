@@ -6,6 +6,7 @@ import { getOpenAIClient, openAIModel } from "@/lib/ai/openai";
 import { authOptions } from "@/lib/auth/options";
 import { requireCampaignMember } from "@/lib/campaign-auth";
 import { slugForHomebrew } from "@/lib/homebrew";
+import { createHomebrewRevision, homebrewSubmissionSnapshot } from "@/lib/homebrew-submissions";
 import { prisma } from "@/lib/prisma";
 import { validateItemPower } from "@/lib/rules/items";
 import { recordAIUsage, subscriptionService } from "@/lib/subscriptions/service";
@@ -52,24 +53,34 @@ export async function POST(request: Request) {
     attunementRequired: Boolean(formatted.attunementRequired)
   });
   const title = String(formatted.name || "Custom Item");
-  const homebrew = await prisma.homebrewContent.create({
-    data: {
-      type: "CUSTOM_ITEM",
-      title,
-      slug: slugForHomebrew(title),
-      summary: String(formatted.description || parsed.data.idea).slice(0, 500),
-      body: { ...formatted, characterId: parsed.data.characterId },
-      rulesResult: rules,
-      rarity: String(formatted.rarity || rules.rarity),
-      professionRequirements: Array.isArray(formatted.professionRequirements) ? formatted.professionRequirements : [],
-      imagePrompt: formatted.imagePrompt ? String(formatted.imagePrompt) : undefined,
-      imageAltText: formatted.imageAltText ? String(formatted.imageAltText) : undefined,
-      generatedByAi: true,
-      status: parsed.data.submitForReview ? "PENDING_DM_REVIEW" : "DRAFT",
-      visibility: parsed.data.campaignId ? "CAMPAIGN_ONLY" : "PRIVATE_USER",
-      campaignId: parsed.data.campaignId,
-      authorId: userId
-    }
+  const homebrew = await prisma.$transaction(async (tx) => {
+    const created = await tx.homebrewContent.create({
+      data: {
+        type: "CUSTOM_ITEM",
+        title,
+        slug: slugForHomebrew(title),
+        summary: String(formatted.description || parsed.data.idea).slice(0, 500),
+        body: { ...formatted, characterId: parsed.data.characterId },
+        rulesResult: rules,
+        rarity: String(formatted.rarity || rules.rarity),
+        professionRequirements: Array.isArray(formatted.professionRequirements) ? formatted.professionRequirements : [],
+        imagePrompt: formatted.imagePrompt ? String(formatted.imagePrompt) : undefined,
+        imageAltText: formatted.imageAltText ? String(formatted.imageAltText) : undefined,
+        generatedByAi: true,
+        status: parsed.data.submitForReview ? "PENDING_DM_REVIEW" : "DRAFT",
+        visibility: parsed.data.campaignId ? "CAMPAIGN_ONLY" : "PRIVATE_USER",
+        campaignId: parsed.data.campaignId,
+        characterId: parsed.data.characterId,
+        submittedAt: parsed.data.submitForReview ? new Date() : undefined,
+        authorId: userId
+      }
+    });
+    await createHomebrewRevision(tx, {
+      homebrewId: created.id,
+      submittedById: userId,
+      snapshot: homebrewSubmissionSnapshot(created)
+    });
+    return tx.homebrewContent.findUniqueOrThrow({ where: { id: created.id } });
   });
 
   return NextResponse.json({ formatted, rules, homebrew, approvalRequired: true });

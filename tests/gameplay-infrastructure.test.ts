@@ -6,6 +6,7 @@ import { compactForModel, validateAssistantUserMessage } from "@/lib/assistant/m
 import { formatCurrency, fromCopper, splitCopper, toCopper } from "@/lib/currency/conversion";
 import crypto from "node:crypto";
 import { getInviteStatus } from "@/lib/invites";
+import { homebrewSubmissionSnapshot } from "@/lib/homebrew-submissions";
 import { blueprintToMapLayers, createBlankMapBlueprint, validateMapBlueprint } from "@/lib/maps/blueprint-schema";
 import { buildEditableMapBlueprintPrompt, buildTopDownBattleMapPrompt } from "@/lib/maps/prompt-templates";
 import { wouldRemoveFinalDm } from "@/lib/member-roles";
@@ -225,6 +226,38 @@ describe("crafted item pricing", () => {
     expect(pricing.merchantBuyCopper).toBeLessThan(pricing.baseValueCopper);
     expect(pricing.merchantSellCopper).toBeGreaterThan(pricing.baseValueCopper);
     expect(pricing.display.baseValue).toMatch(/CP|SP|GP|PP/);
+  });
+});
+
+describe("homebrew submission lifecycle", () => {
+  it("captures character-linked submission snapshots for revision history", () => {
+    const snapshot = homebrewSubmissionSnapshot({
+      type: "CUSTOM_SPELL",
+      title: "Ashen Ward",
+      summary: "A defensive fire charm",
+      body: { name: "Ashen Ward", characterId: "char_1" },
+      rulesResult: { manaCost: 10, balanceNotes: ["DM approval required"] },
+      rarity: null,
+      discipline: "Elemental",
+      professionRequirements: [],
+      imageUrl: null,
+      imagePrompt: null,
+      imageAltText: null,
+      generatedByAi: true,
+      status: "PENDING_DM_REVIEW",
+      visibility: "CAMPAIGN_ONLY",
+      campaignId: "camp_1",
+      characterId: "char_1"
+    });
+
+    expect(snapshot).toMatchObject({
+      type: "CUSTOM_SPELL",
+      title: "Ashen Ward",
+      status: "PENDING_DM_REVIEW",
+      campaignId: "camp_1",
+      characterId: "char_1",
+      generatedByAi: true
+    });
   });
 });
 

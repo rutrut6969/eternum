@@ -327,6 +327,9 @@ model User {
   homebrew       HomebrewContent[]
   diceRolls      DiceRoll[]
   approvals      ApprovalRequest[] @relation("ApprovalReviewer")
+  reviewedHomebrew HomebrewContent[] @relation("HomebrewReviewer")
+  submittedHomebrewRevisions HomebrewRevision[] @relation("HomebrewRevisionSubmitter")
+  reviewedHomebrewRevisions HomebrewRevision[] @relation("HomebrewRevisionReviewer")
   campaignSessions CampaignSession[] @relation("CampaignSessionCreator")
   activityLogs   ActivityLog[] @relation("ActivityActor")
   campaignNotes  CampaignNote[] @relation("CampaignNoteAuthor")
@@ -662,6 +665,7 @@ model Character {
   mapTokens        MapToken[]
   initiativeEntries InitiativeEntry[]
   assistantThreads AssistantThread[]
+  homebrewSubmissions HomebrewContent[] @relation("CharacterHomebrewSubmissions")
   wallet           CharacterWallet?
   currencyTransactions CurrencyTransaction[]
 }
@@ -755,17 +759,49 @@ model HomebrewContent {
   status       ApprovalStatus    @default(DRAFT)
   visibility   ContentVisibility @default(PRIVATE_USER)
   campaignId   String?
+  characterId  String?
   authorId     String
+  submittedAt  DateTime?
+  reviewedAt   DateTime?
+  reviewedByUserId String?
+  dmFeedback   String?           @db.Text
+  currentRevisionId String?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   publishRequestedAt DateTime?
   publishedAt  DateTime?
 
   campaign  Campaign?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  character Character?        @relation("CharacterHomebrewSubmissions", fields: [characterId], references: [id], onDelete: SetNull)
   author    User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reviewedBy User?            @relation("HomebrewReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   approvals ApprovalRequest[]
+  revisions HomebrewRevision[]
 
   @@unique([type, slug])
+  @@index([characterId, status])
+  @@index([campaignId, status])
+  @@index([authorId, updatedAt])
+}
+
+model HomebrewRevision {
+  id              String          @id @default(cuid())
+  homebrewId      String
+  revisionNumber  Int
+  contentSnapshot Json
+  submittedById   String
+  submittedAt     DateTime        @default(now())
+  dmFeedback      String?         @db.Text
+  dmDecision      ApprovalStatus?
+  reviewedById    String?
+  reviewedAt      DateTime?
+
+  homebrew    HomebrewContent @relation(fields: [homebrewId], references: [id], onDelete: Cascade)
+  submittedBy User            @relation("HomebrewRevisionSubmitter", fields: [submittedById], references: [id], onDelete: Cascade)
+  reviewedBy  User?           @relation("HomebrewRevisionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([homebrewId, revisionNumber])
+  @@index([homebrewId, submittedAt])
 }
 
 model AssistantThread {

@@ -18,6 +18,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ an
 
   const parsed = reviewSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid review." }, { status: 400 });
+  if ((parsed.data.action === "reject" || parsed.data.action === "request_edits") && !parsed.data.note?.trim()) {
+    return NextResponse.json({ error: "DM feedback is required when denying or requesting edits." }, { status: 400 });
+  }
 
   const analysis = await prisma.backstoryAnalysis.findUnique({
     where: { id: analysisId },
@@ -40,7 +43,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ an
 
   const updated = await prisma.backstoryAnalysis.update({
     where: { id: analysis.id },
-    data: { status, dmNotes: parsed.data.note, reviewedAt: new Date() }
+    data: { status, dmNotes: parsed.data.note?.trim() || null, reviewedAt: new Date() }
   });
 
   if (parsed.data.action === "approve") {

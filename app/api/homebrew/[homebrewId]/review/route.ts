@@ -5,6 +5,7 @@ import { createActivity } from "@/lib/activity";
 import { getCurrentUserId } from "@/lib/auth/session";
 import { requireCampaignDm } from "@/lib/campaign-auth";
 import { prisma } from "@/lib/prisma";
+import { markCurrentRevisionReviewed } from "@/lib/homebrew-submissions";
 import { subscriptionService } from "@/lib/subscriptions/service";
 
 const schema = z.object({
@@ -22,6 +23,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ho
   const { homebrewId } = await params;
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Invalid review action." }, { status: 400 });
+  if ((parsed.data.action === "reject" || parsed.data.action === "request_edits") && !parsed.data.note?.trim()) {
+    return NextResponse.json({ error: "DM feedback is required when denying or requesting edits." }, { status: 400 });
+  }
 
   if (parsed.data.action === "approve_public") {
     const reviewer = await prisma.user.findUnique({ where: { id: userId }, select: { emailVerified: true } });
@@ -50,13 +54,76 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ho
             : "REJECTED";
 
   const visibility = parsed.data.action === "approve_public" ? "PUBLIC_LIBRARY" : content.visibility;
-  const updated = await prisma.homebrewContent.update({
-    where: { id: content.id },
-    data: {
-      status,
-      visibility,
-      publishedAt: parsed.data.action === "approve_public" ? new Date() : content.publishedAt
+  const updated = await prisma.$transaction(async (tx) => {
+    const next = await tx.homebrewContent.update({
+      where: { id: content.id },
+      data: {
+        status,
+        visibility,
+        reviewedAt: new Date(),
+        reviewedByUserId: userId,
+        dmFeedback: parsed.data.note?.trim() || null,
+        publishedAt: parsed.data.action === "approve_public" ? new Date() : content.publishedAt
+      }
+    });
+    await markCurrentRevisionReviewed(tx, {
+      revisionId: content.currentRevisionId,
+      decision: status,
+      feedback: parsed.data.note?.trim() || null,
+      reviewedById: userId
+    });
+
+    if (parsed.data.action === "approve_private" || parsed.data.action === "approve_public") {
+      const body = content.body && typeof content.body === "object" && !Array.isArray(content.body) ? content.body : {};
+      const characterId = content.characterId || ("characterId" in body ? String(body.characterId ?? "") : "");
+      if (characterId) {
+        const character = await tx.character.findUnique({ where: { id: characterId } });
+        if (character) {
+          const card = {
+            id: content.id,
+            name: content.title,
+            summary: content.summary,
+            rarity: content.rarity,
+            discipline: content.discipline,
+            rulesResult: content.rulesResult,
+            body: content.body,
+            status,
+            approvedAt: new Date().toISOString()
+          };
+          if (content.type === "CUSTOM_SPELL") {
+            await tx.character.update({ where: { id: character.id }, data: { customSpells: appendJson(character.customSpells, card) } });
+            await tx.characterMilestone.create({
+              data: {
+                characterId: character.id,
+                campaignId: content.campaignId,
+                type: "SPELL_LEARNED",
+                title: `${content.title} approved`,
+                metadata: { homebrewId: content.id, status }
+              }
+            });
+          }
+          if (content.type === "CUSTOM_ITEM") {
+            await tx.character.update({
+              where: { id: character.id },
+              data: {
+                craftedItems: appendJson(character.craftedItems, card),
+                inventory: appendJson(character.inventory, { ...card, source: "homebrew", quantity: 1, equipped: false })
+              }
+            });
+            await tx.characterMilestone.create({
+              data: {
+                characterId: character.id,
+                campaignId: content.campaignId,
+                type: "ITEM_CRAFTED",
+                title: `${content.title} approved`,
+                metadata: { homebrewId: content.id, status }
+              }
+            });
+          }
+        }
+      }
     }
+    return next;
   });
 
   if (parsed.data.action === "approve_private" || parsed.data.action === "approve_public") {
@@ -66,38 +133,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ho
       type: parsed.data.action === "approve_public" ? "HOMEBREW_PUBLISHED" : "HOMEBREW_APPROVED",
       metadata: { homebrewId: content.id, title: content.title, contentType: content.type, status }
     });
-  }
-
-  if (parsed.data.action === "approve_private" || parsed.data.action === "approve_public") {
-    const body = content.body && typeof content.body === "object" && !Array.isArray(content.body) ? content.body : {};
-    const characterId = "characterId" in body ? String(body.characterId ?? "") : "";
-    if (characterId) {
-      const character = await prisma.character.findUnique({ where: { id: characterId } });
-      if (character) {
-        const card = {
-          id: content.id,
-          name: content.title,
-          summary: content.summary,
-          rarity: content.rarity,
-          discipline: content.discipline,
-          rulesResult: content.rulesResult,
-          body: content.body,
-          status
-        };
-        if (content.type === "CUSTOM_SPELL") {
-          await prisma.character.update({ where: { id: character.id }, data: { customSpells: appendJson(character.customSpells, card) } });
-        }
-        if (content.type === "CUSTOM_ITEM") {
-          await prisma.character.update({
-            where: { id: character.id },
-            data: {
-              craftedItems: appendJson(character.craftedItems, card),
-              inventory: appendJson(character.inventory, { ...card, source: "homebrew", quantity: 1, equipped: false })
-            }
-          });
-        }
-      }
-    }
   }
 
   return NextResponse.json({ homebrew: updated });
