@@ -31,6 +31,8 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Never expose secrets and never commit `.env` files.
 - Never rely only on frontend authorization.
 - DM-only actions require server-side campaign membership checks.
+- `/dashboard/campaigns` should stay a campaign launcher/index. Full campaign management belongs in `/dashboard/campaigns/[campaignId]`.
+- A campaign workspace should expose Overview, Sessions, Characters, Members, Invites, Approvals, Dice, Notes, Maps/VTT, Homebrew, Enabled Content, and Settings as local sections or routes.
 - Character-owned gameplay data must stay tied to `Character` records.
 - Character creation is classless/archetype-based. Do not make traditional D&D class a required core identity; use training focus, professions, disciplines, and attributes instead.
 - Currency math must use copper pieces as the internal base unit. UI can display CP/SP/EP/GP/PP, but services and audits should store copper totals.
@@ -63,6 +65,8 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Prevent horizontal overflow on all public and dashboard pages.
 - CTA buttons should not wrap awkwardly on 390px, 430px, or 768px widths.
 - Cards should scale down gracefully and avoid desktop-only multi-column assumptions.
+- Campaign workspace navigation should be mobile-friendly, using horizontal scroll tabs or a compact selector instead of forcing desktop tabs onto small screens.
+- Maps/VTT controls should be visible from the campaign workspace even while full VTT rendering, combat automation, fog, lighting, and player view remain future work.
 
 ## Testing Rules
 

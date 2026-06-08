@@ -87,9 +87,11 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - AI-generated map support foundation with map visibility/status enums, map image records, map tags, AI prompt metadata, grid type/dimensions, party level, notes, spawn points, lighting notes, encounter suggestions, public map library search, and public map clone/import API.
 - Top-down battle map prompt template utility that enforces VTT-friendly perspective, no labels, grid alignment, clear terrain, and high contrast.
 - Character milestone tracking for profession levels, learned spells, crafted items, affinity gains, loot awards, and notable achievements.
-- True campaign dashboard at `/dashboard/campaigns/[campaignId]` with active session, recent activity, members, characters, notes, homebrew awaiting approval, session history, timeline, and VTT data placeholders.
-- Campaign dashboard polish adds compact mobile summary cards for members, characters, approvals, sessions, notes, and maps, plus active-session map counts and character milestone previews.
-- VTT campaign panel now displays map images, descriptions, tags, grid/status badges, AI-image badges, and lets DMs attach new map records to either the campaign or a specific session.
+- Campaign list page at `/dashboard/campaigns` is now an index/launcher with create, join, Campaigns I DM, Campaigns I play in, archived campaigns, state badges, and Open Campaign actions.
+- True campaign workspace at `/dashboard/campaigns/[campaignId]` with local mobile-scroll tabs for Overview, Sessions, Characters, Members, Invites, Approvals, Dice Rolls, Notes, Maps/VTT, Homebrew, Enabled Content, and Settings.
+- Campaign workspace overview shows active session, recent activity, party characters, pending approvals, recent dice rolls, current maps, and quick actions.
+- Member role editing, invite creation/copy links, and campaign settings now live inside the dedicated campaign workspace instead of the campaign launcher.
+- VTT campaign panel now displays map images, descriptions, tags, grid/status badges, AI-image badges, visible empty states, and lets DMs attach new map records to either the campaign or a specific session.
 - Editable map builder foundation with `/dashboard/maps/new` and `/dashboard/maps/[mapId]/edit`, using SVG grid rendering and structured `MapLayer.data` rather than flat images.
 - Map source tracking now supports manual maps, AI blueprint drafts, uploaded image maps, and hybrid AI/manual workflows through `MapSourceType`.
 - AI map blueprint route at `/api/ai/map-blueprint` generates strict JSON map blueprints, validates grid bounds and layer data, and can save validated drafts as editable map records.
@@ -115,7 +117,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 
 ## Partially Implemented
 
-- Campaign CRUD is usable, but per-campaign detail pages, richer settings controls, and true hard-delete workflows are still planned.
+- Campaign CRUD is usable with dedicated campaign workspaces, but true hard-delete workflows and richer approval/settings subroutes are still planned.
 - Invite flow has landing pages and token acceptance, but email delivery for invites is still planned.
 - Character creation stores classless identity, SRD species references, training focus, gameplay containers, and wallet records, but richer portrait upload, guided backstory analysis handoff, skill training, research, and archetype progression are still planned.
 - AI backstory approval applies common JSON fields, but suggestion shape validation and a more guided DM diff/preview UI are still planned.
@@ -137,7 +139,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - SRD data currently uses live Open5e fetches plus cache schema foundation; import/refresh scripts and normalized high-volume SRD tables are still planned.
 - Dashboard navigation is functional and mobile-friendly, but active-route highlighting and richer notification detail views are still planned.
 - Account settings display user data, but editable profile fields and linked account management are still placeholders.
-- DM-only mobile drawer links route to the current dashboard/campaign workspaces until dedicated per-tool landing pages exist.
+- DM-only mobile drawer links route to the current dashboard/campaign workspaces until dedicated standalone per-tool landing pages exist.
 - `/invite/[token]` and `/verify-email` currently use the neutral root frame while public/auth/dashboard route groups have dedicated shells.
 - Manual visual QA should continue on real devices and browser widths after each UI pass; this pass added CSS/layout safeguards for 390px, 430px, and 768px widths but still relies on build/test validation unless a local browser session is running.
 - The live `https://eternumvtt.com` URL did not respond from this development environment during this pass, so visual QA was performed against localhost with Chrome device emulation.
@@ -163,6 +165,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Subscription/billing schema changes require `npm run db:push` on development databases.
 - Square checkout and webhook foundations are implemented, but production Square configuration, subscription catalog mapping, refunds, invoices, and customer portal management still need operational setup.
 - `npm run seed:founders` is update-only and safe for passwords/data. It must be run against the database where the target user already exists.
+- Founder users can pass campaign member/DM checks through the shared campaign auth helper for administration and recovery access.
 - The v1 map editor renders structured SVG elements and can add/erase basic element types, but precision drag handles, keyboard shortcuts, image export, fog, lighting, player view, and token automation are future phases.
 - AI map blueprints require `OPENAI_API_KEY` and a plan that passes `canUseFutureMapGeneration()`.
 - Unified assistant messages require `OPENAI_API_KEY` and currently use the existing advanced AI feature gate.
@@ -173,15 +176,16 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 
 1. Configure Square sandbox credentials and verify `/api/billing/checkout` creates payment links.
 2. Run `npm run seed:founders` in each environment after adding `FOUNDER_ACCOUNTS`, then verify with `npm run debug:user -- email-or-username`.
-3. Add dedicated DM tools routes for approvals, sessions, hidden rolls, member management, and campaign settings.
-4. Add dedicated shell treatment for invite and verify-email standalone routes if they should share public chrome.
-5. Verify Square sandbox webhook payload metadata end-to-end and add deeper subscription lifecycle reconciliation.
-6. Add active-route highlighting and richer notification detail views for the authenticated account menu.
-7. Add richer map editor interactions: drag handles, snap controls, layer reordering, labels editing, and image export.
-8. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
-9. Add optional AI image generation as a visual/reference layer after blueprint editing is stable.
-10. Add assistant workflow actions that convert structured drafts into spell/item/NPC/monster/map records and submit them to DM review.
-11. Add assistant campaign memory retrieval for session summaries, NPCs, quests, loot, decisions, and character milestones.
+3. Add dedicated review/action flows inside the campaign Approvals tab for backstory, character, homebrew, and public publish requests.
+4. Add session detail pages for transcript, session memory, loot, encounters, and per-session notes.
+5. Add dedicated shell treatment for invite and verify-email standalone routes if they should share public chrome.
+6. Verify Square sandbox webhook payload metadata end-to-end and add deeper subscription lifecycle reconciliation.
+7. Add active-route highlighting and richer notification detail views for the authenticated account menu.
+8. Add richer map editor interactions: drag handles, snap controls, layer reordering, labels editing, and image export.
+9. Add a campaign UI for importing/cloning public maps and attaching maps to active sessions.
+10. Add optional AI image generation as a visual/reference layer after blueprint editing is stable.
+11. Add assistant workflow actions that convert structured drafts into spell/item/NPC/monster/map records and submit them to DM review.
+12. Add assistant campaign memory retrieval for session summaries, NPCs, quests, loot, decisions, and character milestones.
 
 ## Setup
 

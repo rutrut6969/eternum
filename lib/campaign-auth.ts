@@ -1,6 +1,19 @@
 import type { CampaignRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
+async function getFounderFallback(campaignId: string, userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { isFounder: true } });
+  if (!user?.isFounder) return null;
+
+  return {
+    id: `founder:${campaignId}:${userId}`,
+    campaignId,
+    userId,
+    roles: ["DM", "PLAYER"] as CampaignRole[],
+    createdAt: new Date()
+  };
+}
+
 export async function getMembership(campaignId: string, userId: string) {
   return prisma.campaignMember.findUnique({
     where: { campaignId_userId: { campaignId, userId } }
@@ -13,7 +26,11 @@ export function hasDmPermission(roles: CampaignRole[] = []) {
 
 export async function requireCampaignMember(campaignId: string, userId: string) {
   const membership = await getMembership(campaignId, userId);
-  if (!membership) throw new Error("Campaign membership required.");
+  if (!membership) {
+    const founderAccess = await getFounderFallback(campaignId, userId);
+    if (founderAccess) return founderAccess;
+    throw new Error("Campaign membership required.");
+  }
   return membership;
 }
 

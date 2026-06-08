@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { CampaignManager } from "@/components/campaigns/campaign-manager";
+import { CampaignCreateCard } from "@/components/campaigns/campaign-create-card";
 import { InviteAcceptForm } from "@/components/campaigns/invite-accept-form";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
@@ -16,7 +16,6 @@ export default async function CampaignsPage() {
     where: { members: { some: { userId: user.id } } },
     include: {
       members: { include: { user: { select: { id: true, name: true, email: true, username: true } } } },
-      invites: { where: { status: "PENDING" }, orderBy: { createdAt: "desc" } },
       characters: { where: { ownerId: user.id }, select: { id: true, name: true } },
       campaignSessions: { where: { status: "ACTIVE" }, take: 1 },
       _count: { select: { diceRolls: true, approvals: true, members: true, characters: true } }
@@ -33,35 +32,46 @@ export default async function CampaignsPage() {
   const createCampaignMessage = !account?.emailVerified
     ? "Verify your email before creating campaigns. You can still accept invites, build characters, and browse the public library."
     : "Your current plan cannot create campaigns yet. You can still accept invites and play in existing campaigns.";
-  const summaries = activeCampaigns.map((campaign) => ({
-    id: campaign.id,
-    name: campaign.name,
-    description: campaign.description,
-    settings: campaign.settings,
-    members: campaign.members.map((member) => ({
-      id: member.id,
-      userId: member.userId,
-      roles: member.roles,
-      user: { name: member.user.name, email: member.user.email, username: member.user.username }
-    })),
-    invites: campaign.invites.map((invite) => ({
-      id: invite.id,
-      email: invite.email,
-      token: invite.token,
-      roles: invite.roles,
-      status: invite.status
-    })),
-    characters: campaign.characters,
-    counts: { rolls: campaign._count.diceRolls, approvals: campaign._count.approvals }
-  }));
+
+  function CampaignCard({ campaign, archived = false }: { campaign: typeof campaigns[number]; archived?: boolean }) {
+    const membership = campaign.members.find((member) => member.userId === user.id);
+    const isDm = membership?.roles.includes("DM") || membership?.roles.includes("ASSISTANT_DM");
+    return (
+      <Card>
+        <div className="flex h-full flex-col">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h3 className="text-xl font-bold text-white">{campaign.name}</h3>
+              <p className="mt-2 line-clamp-3 text-sm leading-6 text-zinc-400">{campaign.description || (archived ? "Archived table." : "No description yet.")}</p>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {membership?.roles.map((role) => <Badge key={role} tone={role === "DM" ? "gold" : "mana"}>{role.replace("_", " ")}</Badge>) ?? <Badge tone="mana">Member</Badge>}
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs text-zinc-300 sm:grid-cols-4">
+            <span className="rounded bg-black/25 p-2">{campaign._count.members} members</span>
+            <span className="rounded bg-black/25 p-2">{campaign._count.characters} chars</span>
+            <span className="rounded bg-black/25 p-2">{campaign._count.approvals} approvals</span>
+            <span className="rounded bg-black/25 p-2">{campaign.campaignSessions[0] ? "active" : "idle"}</span>
+          </div>
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Badge tone={archived ? "crimson" : isDm ? "gold" : "violet"}>{archived ? "Archived" : isDm ? "Manage" : "Play"}</Badge>
+            <a className="rounded-md bg-aureate px-4 py-3 text-center text-sm font-semibold text-void hover:bg-aureate/90" href={`/dashboard/campaigns/${campaign.id}`}>
+              Open Campaign
+            </a>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-7 sm:px-5 sm:py-10">
       <Badge tone={hasDmWorkspace ? "gold" : "mana"}>{hasDmWorkspace ? "DM Tools" : "Campaigns"}</Badge>
-      <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl">Campaign workspace</h1>
+      <h1 className="mt-5 text-3xl font-black text-white sm:text-4xl">Campaign launcher</h1>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
         {hasDmWorkspace
-          ? "Create, edit, join, and sort your campaigns by the role you play at each table."
+          ? "Create tables, join by invite, and open each campaign as its own command center."
           : "Join campaigns by invite, open the tables you play in, and keep campaign access separate from character data."}
       </p>
 
@@ -91,45 +101,36 @@ export default async function CampaignsPage() {
             <InviteAcceptForm />
           </div>
         </Card>
+        <CampaignCreateCard canCreateCampaign={canCreateCampaign} createCampaignMessage={createCampaignMessage} />
       </section>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {activeCampaigns.map((campaign) => {
-          const membership = campaign.members.find((member) => member.userId === user.id);
-          return (
-            <Card key={campaign.id}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-white">{campaign.name}</h2>
-                  <p className="mt-2 text-sm text-zinc-400">{campaign.description || "No description yet."}</p>
-                </div>
-                <Badge tone={membership?.roles.includes("DM") ? "gold" : "mana"}>{membership?.roles.join(", ") ?? "Member"}</Badge>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs text-zinc-300 sm:grid-cols-4">
-                <span className="rounded bg-black/25 p-2">{campaign._count.members} members</span>
-                <span className="rounded bg-black/25 p-2">{campaign._count.characters} chars</span>
-                <span className="rounded bg-black/25 p-2">{campaign._count.approvals} approvals</span>
-                <span className="rounded bg-black/25 p-2">{campaign.campaignSessions[0] ? "active session" : "no session"}</span>
-              </div>
-            </Card>
-          );
-        })}
+      <section className="mt-8">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-2xl font-bold text-white">Campaigns I DM</h2>
+          <Badge tone="gold">{dmCampaigns.length}</Badge>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {dmCampaigns.length === 0 ? <Card><p className="text-sm text-zinc-300">No DM campaigns yet.</p></Card> : null}
+          {dmCampaigns.map((campaign) => <CampaignCard key={campaign.id} campaign={campaign} />)}
+        </div>
       </section>
 
-      <div className="mt-8">
-        <CampaignManager campaigns={summaries} canCreateCampaign={canCreateCampaign} createCampaignMessage={createCampaignMessage} />
-      </div>
+      <section className="mt-8">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-2xl font-bold text-white">Campaigns I play in</h2>
+          <Badge tone="mana">{playerCampaigns.length}</Badge>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {playerCampaigns.length === 0 ? <Card><p className="text-sm text-zinc-300">No player campaigns yet. Accept an invite to join a table.</p></Card> : null}
+          {playerCampaigns.map((campaign) => <CampaignCard key={campaign.id} campaign={campaign} />)}
+        </div>
+      </section>
 
       {archivedCampaigns.length ? (
         <section className="mt-8">
           <h2 className="text-2xl font-bold text-white">Archived campaigns</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {archivedCampaigns.map((campaign) => (
-              <Card key={campaign.id}>
-                <h3 className="text-xl font-bold text-white">{campaign.name}</h3>
-                <p className="mt-2 text-sm text-zinc-400">{campaign.description || "Archived table"}</p>
-              </Card>
-            ))}
+            {archivedCampaigns.map((campaign) => <CampaignCard key={campaign.id} campaign={campaign} archived />)}
           </div>
         </section>
       ) : null}
