@@ -10,7 +10,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 
 - Next.js App Router scaffold with TypeScript and TailwindCSS.
 - Dark fantasy / arcane-tech public UI: landing page, rules page, library page, about page, login/register pages, dashboard, campaign manager, character workbench, approval queue, and dice roller.
-- Public site monetization redesign with a stronger landing page, global search entry, expanded Vision page, refreshed navigation/footer, Pricing page, donation page, and launch-prep Privacy/Terms placeholders.
+- Public site monetization redesign with a stronger landing page, global search entry, expanded Vision page, Eternum: Inheritance future RPG page, refreshed navigation/footer, Pricing page, donation page, and launch-prep Privacy/Terms placeholders.
 - Mobile-first responsive layout pass across nav, public pages, auth forms, dashboards, campaign cards, character sheets, approval cards, library cards, and dice roll views.
 - Prisma/PostgreSQL schema for users, auth sessions, campaigns, multi-role campaign members, invites, characters, character gameplay JSON, professions, backstory analysis, homebrew content, approvals, session notes, and dice rolls.
 - NextAuth credentials configuration with Prisma adapter and password hashing.
@@ -69,6 +69,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Public library Prisma query is now defensive: it filters only safe scalar fields in Prisma and moves fuzzy/search/JSON filters into application-side filtering with friendly error handling.
 - Pricing page at `/pricing` with Free, DM, Worldbuilder, and purchasable Founder lifetime tiers plus Square checkout buttons for paid plans.
 - Donation page at `/donate` with public no-account Square donation checkout that does not grant premium access.
+- Eternum: Inheritance public page at `/inheritance` explaining the planned future story-driven fantasy RPG, opt-in living lore pipeline, VTT-to-game connection, community canon philosophy, development status, and support paths.
 - Subscription and billing schema foundation for `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, and `AIUsage`.
 - Subscription feature-gate service foundation with `canCreateCampaign()`, `canUseAdvancedAI()`, `canPublishPublicHomebrew()`, `canUseFutureMapGeneration()`, and `canUseFutureDiscordFeatures()`.
 - Founder/max-tier support with `isFounder`, `founderSince`, active Founder subscriptions, Founder badges, safe `npm run seed:founders`, and `npm run debug:user -- identifier`.
@@ -156,6 +157,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - The live `https://eternumvtt.com` URL did not respond from this development environment during this pass, so visual QA was performed against localhost with Chrome device emulation.
 - Donations create Square payment links without requiring an Eternum account and intentionally do not grant premium access.
 - Founder can now be purchased as a lifetime plan through checkout, while `npm run seed:founders` remains available for manual promotion of existing founder accounts.
+- Eternum: Inheritance is documented as a future concept/pre-development vision only. The page avoids release-date promises and explains that campaign lore may inspire official canon only through future opt-in, reviewed, curated workflows.
 
 ## Known Issues
 
@@ -344,6 +346,14 @@ Production Resend delivery is temporarily optional while the sending domain is l
 - Donations use a separate public Square payment-link route and intentionally do not grant premium access.
 - Stripe is intentionally not implemented.
 
+## Eternum: Inheritance Future RPG
+
+- `/inheritance` presents Eternum: Inheritance as a planned future story-driven fantasy RPG connected to the EternumVTT universe.
+- The page explains the living lore pipeline: VTT campaigns -> campaign lore -> curated canon -> game world -> Eternum: Inheritance.
+- Campaign content is not automatically canon. Any future lore contribution should be opt-in, reviewed, curated, adapted, and credited where appropriate.
+- The page positions EternumVTT as the current priority and foundation for future game lore, mechanics, factions, characters, artifacts, regions, and conflicts.
+- Donations remain separate from subscriptions and do not grant premium access. Founder lifetime access remains a separate pricing path.
+
 ## Invite Links
 
 - DMs can create invite tokens from campaign management.
@@ -528,6 +538,7 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] Public pages and dashboard shells
 - [x] Public homepage conversion redesign
 - [x] Expanded Vision/About page
+- [x] Eternum: Inheritance future RPG public page
 - [x] Public nav and footer monetization links
 - [x] Global public search foundation
 - [x] Readable SRD/Open5e public library cards

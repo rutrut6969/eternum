@@ -23,6 +23,7 @@ type SiteHeaderProps = {
 const publicLinks = [
   { href: "/#features", label: "Features" },
   { href: "/library", label: "Library" },
+  { href: "/inheritance", label: "Eternum: Inheritance" },
   { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "Vision" },
   { href: "/donate", label: "Donate" }
@@ -105,7 +106,7 @@ export function SiteHeader({ account, notificationCount, showDmTools, variant }:
 
         <div className="hidden items-center justify-end gap-2 text-sm text-zinc-300 md:flex">
           {desktopLinks.map((item) => (
-            <Link key={item.href} href={item.href} className="rounded-md px-3 py-2 hover:bg-white/5 hover:text-white">
+            <Link key={item.href} href={item.href} className="whitespace-nowrap rounded-md px-3 py-2 hover:bg-white/5 hover:text-white">
               {item.label}
             </Link>
           ))}

@@ -29,6 +29,7 @@ export default function AboutPage() {
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link className="inline-flex justify-center whitespace-nowrap rounded-md bg-aureate px-5 py-3 font-semibold text-void" href="/register">Create Free Account</Link>
             <Link className="inline-flex justify-center whitespace-nowrap rounded-md border border-mana/35 px-5 py-3 font-semibold text-mana" href="/pricing">View Plans</Link>
+            <Link className="inline-flex justify-center whitespace-nowrap rounded-md border border-emerald-300/35 px-5 py-3 font-semibold text-emerald-200" href="/inheritance">Eternum: Inheritance</Link>
           </div>
         </div>
         <Card className="border-violet/20 bg-violet/5">
@@ -97,6 +98,7 @@ export default function AboutPage() {
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link className="inline-flex justify-center whitespace-nowrap rounded-md bg-aureate px-5 py-3 font-semibold text-void" href="/library">Explore Library</Link>
           <Link className="inline-flex justify-center whitespace-nowrap rounded-md border border-white/15 px-5 py-3 font-semibold text-white" href="/donate">Support Development</Link>
+          <Link className="inline-flex justify-center whitespace-nowrap rounded-md border border-emerald-300/35 px-5 py-3 font-semibold text-emerald-200" href="/inheritance">Explore Inheritance</Link>
         </div>
       </section>
     </main>

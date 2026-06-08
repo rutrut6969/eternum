@@ -178,6 +178,32 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="border-y border-emerald-300/15 bg-[radial-gradient(circle_at_25%_0%,rgba(52,211,153,0.12),transparent_32%),rgba(7,7,12,0.82)] px-4 py-10 sm:px-5 sm:py-14">
+        <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <Badge tone="stamina">Future RPG universe</Badge>
+            <h2 className="mt-4 text-3xl font-black text-white sm:text-5xl">EternumVTT is also the lore foundation for Eternum: Inheritance.</h2>
+            <p className="mt-5 text-sm leading-7 text-zinc-300">
+              The planned future RPG is a long-term vision where opt-in campaign lore, characters, factions, conflicts, ruins, and legends may inspire a curated fantasy world beyond the tabletop app.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Link href="/inheritance" className="inline-flex justify-center whitespace-nowrap rounded-md bg-emerald-300 px-5 py-3 font-semibold text-void">Explore Inheritance</Link>
+              <Link href="/about" className="inline-flex justify-center whitespace-nowrap rounded-md border border-white/15 px-5 py-3 font-semibold text-white">Read the Vision</Link>
+            </div>
+          </div>
+          <Card className="border-emerald-300/20 bg-emerald-300/5">
+            <div className="grid gap-3 sm:grid-cols-5">
+              {["Campaigns", "Lore", "Curated Canon", "Game World", "Inheritance"].map((step) => (
+                <div key={step} className="rounded-md border border-white/10 bg-black/25 p-3 text-center text-xs font-semibold text-zinc-200">{step}</div>
+              ))}
+            </div>
+            <p className="mt-4 text-sm leading-6 text-zinc-300">
+              Not every campaign becomes canon. Future lore contribution should be opt-in, reviewed, curated, credited where appropriate, and adapted with care.
+            </p>
+          </Card>
+        </div>
+      </section>
+
       <section className="border-t border-white/10 bg-void/80 px-4 py-12 text-center sm:px-5">
         <h2 className="text-3xl font-black text-white sm:text-5xl">Start Building Your World Today</h2>
         <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-zinc-300">Create characters, join tables, browse public content, or support the project as Eternum grows into a full AI-powered VTT ecosystem.</p>

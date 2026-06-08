@@ -47,6 +47,7 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Do not implement payment processing, Discord, full VTT combat, dynamic lighting, or AI image generation unless explicitly requested.
 - Square credentials must stay server-only. Use `SQUARE_ENVIRONMENT=sandbox|production` and the matching sandbox/production token/application/location/webhook variables.
 - Public donations must remain separate from subscription state and must not grant premium access.
+- Eternum: Inheritance is a planned future RPG concept, not a promised release. Use cautious language such as "may inspire", "planned future project", "opt-in", "reviewed", and "curated"; never promise automatic canon inclusion or a release date.
 - The map builder may be inspired by the broad category of sketch-style tabletop map editors, but must not copy Dungeon Scrawl code, branding, UI, interaction design, or assets.
 - Structured editable map data is preferred over flat map images. Rooms, corridors, terrain, notes, spawn points, and secrets should remain editable through `MapLayer.data`.
 - AI map generation should produce validated map blueprints before any data is saved. AI image generation is separate and should not replace editable blueprint data.
