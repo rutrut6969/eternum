@@ -6,10 +6,11 @@ import { prisma } from "@/lib/prisma";
 
 const lanes = [
   { title: "My Drafts", statuses: ["DRAFT"] },
-  { title: "Pending Review", statuses: ["PENDING_DM_REVIEW", "NEEDS_CHANGES"] },
-  { title: "Approved Private", statuses: ["APPROVED_PRIVATE"] },
+  { title: "Pending Approval", statuses: ["PENDING_DM_REVIEW"] },
+  { title: "Needs Revision", statuses: ["NEEDS_CHANGES"] },
+  { title: "Approved", statuses: ["APPROVED_PRIVATE"] },
   { title: "Published Public", statuses: ["APPROVED_PUBLIC"] },
-  { title: "Rejected/Archived", statuses: ["REJECTED", "ARCHIVED"] }
+  { title: "Denied/Archived", statuses: ["REJECTED", "ARCHIVED"] }
 ];
 
 export default async function HomebrewWorkspacePage() {
@@ -34,7 +35,7 @@ export default async function HomebrewWorkspacePage() {
         <Link className="rounded-lg border border-white/10 bg-black/25 p-4 font-semibold text-zinc-400 hover:bg-white/5" href="/dashboard/homebrew?type=npc">New Creature/NPC placeholder</Link>
       </section>
 
-      <section className="mt-8 grid gap-5 xl:grid-cols-5">
+      <section className="mt-8 grid gap-5 xl:grid-cols-6">
         {lanes.map((lane) => {
           const laneItems = items.filter((item) => lane.statuses.includes(item.status));
           return (

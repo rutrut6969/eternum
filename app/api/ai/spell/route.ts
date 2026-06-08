@@ -4,6 +4,7 @@ import { z } from "zod";
 import { spellSystemPrompt } from "@/lib/ai/prompts";
 import { getOpenAIClient, openAIModel } from "@/lib/ai/openai";
 import { authOptions } from "@/lib/auth/options";
+import { deriveSubmissionContext, ensureApprovalRequest, logApprovalActivity } from "@/lib/approval-lifecycle";
 import { requireCampaignMember } from "@/lib/campaign-auth";
 import { slugForHomebrew } from "@/lib/homebrew";
 import { createHomebrewRevision, homebrewSubmissionSnapshot } from "@/lib/homebrew-submissions";
@@ -56,20 +57,26 @@ export async function POST(request: Request) {
   };
 
   const title = String(formatted.name || "Custom Spell");
-  const homebrew = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const context = await deriveSubmissionContext(tx, {
+      userId,
+      characterId: parsed.data.characterId,
+      campaignId: parsed.data.campaignId,
+      submitForReview: parsed.data.submitForReview
+    });
     const created = await tx.homebrewContent.create({
       data: {
         type: "CUSTOM_SPELL",
         title,
         slug: slugForHomebrew(title),
         summary: String(formatted.baseEffect || parsed.data.idea).slice(0, 500),
-        body: { ...formatted, characterId: parsed.data.characterId, baseManaIntent: parsed.data.baseManaIntent },
+        body: { ...formatted, characterId: context.characterId, baseManaIntent: parsed.data.baseManaIntent },
         rulesResult: rules,
         discipline: formatted.discipline ? String(formatted.discipline) : undefined,
         status: parsed.data.submitForReview ? "PENDING_DM_REVIEW" : "DRAFT",
-        visibility: parsed.data.campaignId ? "CAMPAIGN_ONLY" : "PRIVATE_USER",
-        campaignId: parsed.data.campaignId,
-        characterId: parsed.data.characterId,
+        visibility: context.campaignId ? "CAMPAIGN_ONLY" : "PRIVATE_USER",
+        campaignId: context.campaignId,
+        characterId: context.characterId,
         submittedAt: parsed.data.submitForReview ? new Date() : undefined,
         authorId: userId,
         generatedByAi: true
@@ -80,8 +87,25 @@ export async function POST(request: Request) {
       submittedById: userId,
       snapshot: homebrewSubmissionSnapshot(created)
     });
+    if (parsed.data.submitForReview && context.campaignId) {
+      await ensureApprovalRequest(tx, {
+        campaignId: context.campaignId,
+        homebrewId: created.id,
+        requestNote: "AI-generated custom spell submitted for DM approval."
+      });
+      await logApprovalActivity(tx, {
+        campaignId: context.campaignId,
+        actorId: userId,
+        type: "HOMEBREW_SUBMITTED",
+        metadata: { homebrewId: created.id, title: created.title, contentType: created.type, characterId: context.characterId, generatedByAi: true }
+      });
+    }
     return tx.homebrewContent.findUniqueOrThrow({ where: { id: created.id } });
+  }).then((homebrew) => ({ homebrew })).catch((error) => {
+    const message = error instanceof Error ? error.message : "Submission Failed";
+    return { error: message };
   });
+  if ("error" in result) return NextResponse.json({ error: result.error || "Submission Failed" }, { status: 400 });
 
-  return NextResponse.json({ formatted, rules, homebrew, approvalRequired: true });
+  return NextResponse.json({ formatted, rules, homebrew: result.homebrew, approvalRequired: true });
 }

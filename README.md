@@ -63,11 +63,14 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Image storage foundation is prepared through `imageUrl`, `imagePrompt`, `imageAltText`, `generatedByAi`, and Blob token configuration.
 - Homebrew images render on item/homebrew cards, approval cards, character inventory cards, and public library cards.
 - Homebrew approval queue now supports custom spells, custom items, crafted-item style content, and publish requests with approve private, approve public, reject, request edits, and archive actions.
-- Player submission lifecycle is now visible for character-linked custom spells, custom items, crafted-style submissions, and backstory suggestions, with player-facing Draft, Pending Approval, Edits Requested, DM Denied, DM Approved, and Archived status badges.
+- Approval lifecycle hardening now creates `ApprovalRequest` records whenever review-bound homebrew is submitted or resubmitted, including AI-generated spell/item submissions linked through a character.
+- Character-linked submissions now derive `characterId` and `campaignId` server-side from the linked character instead of trusting client-provided campaign IDs.
+- Player submission lifecycle is now visible for character-linked custom spells, custom items, crafted-style submissions, traits, affinities, companions, undead servants, homebrew abilities, and backstory suggestions, with player-facing Draft, Pending Approval, Needs Revision, Denied, Approved, and Archived status language.
 - Homebrew submissions now store linked character/campaign metadata, submitted/reviewed timestamps, reviewing DM, DM feedback, current revision, and revision history through `HomebrewRevision`.
 - DM review actions require feedback for deny and request-edits decisions, preserve the decision on the current revision, and keep the submission visible to the player.
 - Players can revise and resubmit denied, edit-requested, or draft homebrew submissions without overwriting prior revision history.
-- Approved custom spells automatically attach to the character custom spell list and create a spell-learning milestone; approved custom items attach to inventory/crafted history and create an item milestone.
+- Approved custom spells automatically attach to the character spellbook and custom spell list; custom items attach to inventory; crafted items attach to inventory and crafting history; traits/affinities/companions/undead servants route into their character-owned gameplay arrays.
+- Approval lifecycle activity logs now record submitted, resubmitted, approved, denied, and changes-requested events for campaign feeds and character history.
 - Publish-to-public flow allows authors to request public publication after private approval and lets DMs confirm publication.
 - Public library is database-backed and only shows `APPROVED_PUBLIC` content with `PUBLIC_LIBRARY` visibility.
 - Public library filters include content type, rarity, discipline, profession requirement, creator, campaign source, and name/description search.
@@ -164,7 +167,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Campaign session dashboard is functional, but recurring scheduling/calendar integrations are not implemented.
 - Subscription models, feature gates, pricing page, Square recurring subscription checkout, Founder lifetime checkout, donation checkout, webhook foundation, checkout/order tracking, reconciliation helper, and AI usage tracking exist, but billing portal, invoices, refunds, cancellation self-service, and deeper Square lifecycle sync are still partial.
 - Homebrew spell/item builder routes are usable entry points, but rich field-level spell/item editors and post-save image-upload handoff are still basic.
-- Player-facing submission status trails are implemented for homebrew-backed spells/items/crafted-style content and backstory analysis, but dedicated tamed creature, undead servant, companion, and trait/flaw/affinity submission tables/forms are still planned.
+- Player-facing submission status trails are implemented for homebrew-backed spells/items/crafted-style content, trait/affinity/companion/undead foundations, and backstory analysis, but dedicated rich tamed creature, undead servant, companion, and trait/flaw/affinity forms are still planned.
 - Revision history exists for homebrew submissions, but a richer diff view and structured field-by-field amendment UI are still planned.
 - Unified assistant stores structured drafts and workflow state, but it does not yet convert assistant workflows directly into saved homebrew, characters, NPCs, monsters, quests, handouts, compendiums, or DM review submissions.
 - Currency wallets, transfers, manual loot event records, and pending inventory/currency update schema exist, but rich loot claim queues, edit/approve/reject UI, listener-driven loot detection, and auto-approval settings are still planned.
@@ -190,6 +193,7 @@ AI helps players and DMs express creative ideas. The Eternum rules engine owns n
 - Existing development databases with users may need a migration/backfill strategy before making `username` required in production.
 - Existing development databases need `npm run db:push` after this pass to add homebrew metadata columns.
 - Submission lifecycle schema changes require `npm run db:push` to add `HomebrewRevision` and nullable homebrew submission metadata fields.
+- Approval lifecycle schema changes require `npm run db:push` to add newer homebrew content types and activity log event types for submitted/resubmitted/denied/changes-requested events.
 - Public library profession filtering currently filters JSON requirements in application code after fetching approved public records.
 - Public library search intentionally avoids Prisma JSON filtering and relation/fuzzy filters in the database query; creator/campaign/profession/search filters run in application code after fetching approved public records.
 - Resend requires a verified sending domain for production email delivery.
@@ -407,7 +411,7 @@ npm run prisma:deploy
 
 Production should use a managed PostgreSQL database such as Neon, Supabase, Render, Railway, or Vercel Postgres.
 
-Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, `AIUsage`, `User.isFounder`, `User.founderSince`, Square checkout tracking fields on `UserSubscription`, `Map.sourceType`, `Map.blueprintVersion`, `Map.editorState`, `AssistantThread`, `AssistantMessage`, `AssistantWorkflow`, `SrdSource`, `SrdEntry`, `CharacterWallet`, `PartyTreasury`, and `CurrencyTransaction`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, founder access, Square checkout reconciliation, AI usage tracking, editable map builder features, unified assistant features, SRD cache features, or currency wallets locally.
+Recent passes added `CampaignSession`, `ActivityLog`, `CampaignNote`, `CharacterMilestone`, `Map`, `MapImage`, `MapTag`, `MapLayer`, `MapToken`, `CombatEncounter`, `InitiativeEntry`, `SubscriptionPlan`, `UserSubscription`, `BillingEvent`, `AIUsage`, `User.isFounder`, `User.founderSince`, Square checkout tracking fields on `UserSubscription`, approval lifecycle content/activity enum values, `Map.sourceType`, `Map.blueprintVersion`, `Map.editorState`, `AssistantThread`, `AssistantMessage`, `AssistantWorkflow`, `SrdSource`, `SrdEntry`, `CharacterWallet`, `PartyTreasury`, and `CurrencyTransaction`. Run `npm run db:push` before testing sessions, notes, activity feeds, milestones, public maps, subscription placeholders, founder access, Square checkout reconciliation, approval queues, AI usage tracking, editable map builder features, unified assistant features, SRD cache features, or currency wallets locally.
 
 ## Deployment
 
@@ -489,6 +493,10 @@ Do not run deployment watch commands until the Vercel project is linked.
 - [x] DM feedback requirement for deny/request-edit decisions
 - [x] Approved homebrew-to-character gameplay attachment for spells/items
 - [x] Publish-to-public request and DM confirmation flow
+- [x] Approval request creation for submitted/resubmitted homebrew
+- [x] Server-side campaign derivation from linked character submissions
+- [x] Approval activity logging for submitted, resubmitted, approved, denied, and changes requested
+- [x] Automatic approved content integration into character spellbook, inventory, crafting history, traits, affinities, companions, and undead servant foundations
 - [x] Public library database search and filters
 - [x] Public library safe Prisma query and friendly error fallback
 - [x] Pricing page foundation

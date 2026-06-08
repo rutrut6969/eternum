@@ -64,7 +64,7 @@ export function HomebrewDraftForm({ kind, campaigns, characters }: { kind: Draft
       setMessage(body?.error || `Could not save ${noun}.`);
       return;
     }
-    setMessage(submitForReview ? `${noun} submitted for DM review.` : `${noun} saved as draft.`);
+    setMessage(submitForReview ? "Submitted for DM Approval." : "Saved as Draft.");
     setTitle("");
     setSummary("");
     router.refresh();
@@ -92,7 +92,7 @@ export function HomebrewDraftForm({ kind, campaigns, characters }: { kind: Draft
       return;
     }
     setIdea("");
-    setMessage(submitForReview ? `AI ${noun} submitted for DM review.` : `AI ${noun} saved as draft.`);
+    setMessage(submitForReview ? "Submitted for DM Approval." : "Saved as Draft.");
     router.refresh();
   }
 

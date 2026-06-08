@@ -107,9 +107,9 @@ function statusLabel(status: string) {
   const labels: Record<string, string> = {
     DRAFT: "Draft",
     PENDING_DM_REVIEW: "Pending Approval",
-    NEEDS_CHANGES: "Edits Requested",
-    REJECTED: "DM Denied",
-    APPROVED_PRIVATE: "DM Approved",
+    NEEDS_CHANGES: "Needs Revision",
+    REJECTED: "Denied",
+    APPROVED_PRIVATE: "Approved",
     APPROVED_PUBLIC: "Approved Public",
     ARCHIVED: "Archived"
   };
@@ -183,7 +183,7 @@ function SubmissionStatusCard({ submission, onSaved }: { submission: CharacterSu
       setMessage(body?.error || "Could not resubmit.");
       return;
     }
-    setMessage("Revision submitted for DM approval.");
+    setMessage("Submitted for DM Approval.");
     setEditing(false);
     onSaved();
   }
@@ -453,7 +453,7 @@ export function GameplayEditors({ character }: { character: CharacterGameplay })
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h4 className="font-bold text-white">
-                      {field === "customSpells" ? "Pending Spell Submissions" : field === "inventory" ? "Pending Item Submissions" : field === "craftedItems" ? "Crafting Submission History" : "Pending Suggestions"}
+                      {field === "customSpells" ? "Spell Submissions" : field === "inventory" ? "Item Submissions" : field === "craftedItems" ? "Crafting Submission History" : "Character Development Submissions"}
                     </h4>
                     <p className="mt-1 text-xs text-zinc-500">Submitted content remains visible through approval, denial, edits, and final use.</p>
                   </div>

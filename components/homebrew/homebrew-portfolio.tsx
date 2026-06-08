@@ -30,9 +30,9 @@ function statusLabel(status: string) {
   const labels: Record<string, string> = {
     DRAFT: "Draft",
     PENDING_DM_REVIEW: "Pending Approval",
-    NEEDS_CHANGES: "Edits Requested",
-    REJECTED: "DM Denied",
-    APPROVED_PRIVATE: "DM Approved",
+    NEEDS_CHANGES: "Needs Revision",
+    REJECTED: "Denied",
+    APPROVED_PRIVATE: "Approved",
     APPROVED_PUBLIC: "Approved Public",
     ARCHIVED: "Archived"
   };

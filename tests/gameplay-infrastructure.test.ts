@@ -18,6 +18,7 @@ import { maxImageSizeBytes, validateImageUpload } from "@/lib/uploads";
 import { buildSquareSubscriptionCheckoutBody, getSquareConfig, verifySquareWebhookSignature } from "@/lib/billing/square";
 import { priceCraftedItem } from "@/lib/rules/pricing";
 import { squareSubscriptionStatusToEternum } from "@/lib/subscriptions/reconciliation";
+import { canonicalApprovalStatusLabels, isCraftedHomebrew } from "@/lib/approval-lifecycle";
 
 describe("campaign session transitions", () => {
   it("starts and completes sessions in order", () => {
@@ -295,6 +296,22 @@ describe("homebrew submission lifecycle", () => {
       characterId: "char_1",
       generatedByAi: true
     });
+  });
+
+  it("maps legacy database statuses to the unified approval language", () => {
+    expect(canonicalApprovalStatusLabels.DRAFT).toBe("DRAFT");
+    expect(canonicalApprovalStatusLabels.PENDING_DM_REVIEW).toBe("PENDING_APPROVAL");
+    expect(canonicalApprovalStatusLabels.NEEDS_CHANGES).toBe("EDITS_REQUESTED");
+    expect(canonicalApprovalStatusLabels.REJECTED).toBe("DENIED");
+    expect(canonicalApprovalStatusLabels.APPROVED_PRIVATE).toBe("APPROVED");
+    expect(canonicalApprovalStatusLabels.ARCHIVED).toBe("ARCHIVED");
+  });
+
+  it("detects crafted submissions for inventory and crafting history integration", () => {
+    expect(isCraftedHomebrew("CRAFTING_RECIPE", {})).toBe(true);
+    expect(isCraftedHomebrew("CUSTOM_ITEM", { source: "crafted" })).toBe(true);
+    expect(isCraftedHomebrew("CUSTOM_ITEM", { materials: ["iron"] })).toBe(true);
+    expect(isCraftedHomebrew("CUSTOM_ITEM", { source: "homebrew" })).toBe(false);
   });
 });
 

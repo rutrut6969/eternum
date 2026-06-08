@@ -55,10 +55,11 @@ export function HomebrewBuilder({ campaigns, characters }: { campaigns: Campaign
       })
     });
     if (!response.ok) {
-      setMessage("Could not submit homebrew.");
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      setMessage(body?.error || "Submission Failed.");
       return;
     }
-    setMessage("Homebrew submitted for DM review.");
+    setMessage("Submitted for DM Approval.");
     setTitle("");
     setSummary("");
     router.refresh();
@@ -74,11 +75,11 @@ export function HomebrewBuilder({ campaigns, characters }: { campaigns: Campaign
     });
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setMessage(body?.error || "Could not create AI draft.");
+      setMessage(body?.error || "Submission Failed.");
       return;
     }
     setIdea("");
-    setMessage("AI draft saved for DM review.");
+    setMessage("Submitted for DM Approval.");
     router.refresh();
   }
 

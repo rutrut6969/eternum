@@ -1,6 +1,7 @@
 import { ContentType, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { deriveSubmissionContext, ensureApprovalRequest, logApprovalActivity } from "@/lib/approval-lifecycle";
 import { getCurrentUserId } from "@/lib/auth/session";
 import { requireCampaignMember } from "@/lib/campaign-auth";
 import { createHomebrewRevision, homebrewSubmissionSnapshot } from "@/lib/homebrew-submissions";
@@ -47,22 +48,33 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ho
   if (!["DRAFT", "REJECTED", "NEEDS_CHANGES"].includes(content.status)) {
     return NextResponse.json({ error: "Only drafts, denied submissions, or edit-requested submissions can be revised." }, { status: 400 });
   }
-  if (!content.campaignId) return NextResponse.json({ error: "A campaign-linked submission is required for DM review." }, { status: 400 });
+  let effectiveCampaignId = content.campaignId;
+  if (!effectiveCampaignId && content.characterId) {
+    const character = await prisma.character.findUnique({ where: { id: content.characterId }, select: { campaignId: true } });
+    effectiveCampaignId = character?.campaignId ?? null;
+  }
+  if (!effectiveCampaignId) return NextResponse.json({ error: "A campaign-linked submission is required for DM review." }, { status: 400 });
 
   try {
-    await requireCampaignMember(content.campaignId, userId);
+    await requireCampaignMember(effectiveCampaignId, userId);
   } catch {
     return NextResponse.json({ error: "Campaign membership required." }, { status: 403 });
   }
 
   const rulesResult = rulesFor(content.type, parsed.data);
   const updated = await prisma.$transaction(async (tx) => {
+    const context = await deriveSubmissionContext(tx, {
+      userId,
+      characterId: content.characterId,
+      campaignId: content.campaignId,
+      submitForReview: true
+    });
     const next = await tx.homebrewContent.update({
       where: { id: content.id },
       data: {
         title: parsed.data.title,
         summary: parsed.data.summary,
-        body: { ...parsed.data.body, characterId: content.characterId } as Prisma.InputJsonValue,
+        body: { ...parsed.data.body, characterId: context.characterId } as Prisma.InputJsonValue,
         rulesResult: rulesResult as Prisma.InputJsonValue,
         rarity: parsed.data.rarity,
         discipline: parsed.data.discipline,
@@ -71,6 +83,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ho
         imagePrompt: parsed.data.imagePrompt,
         imageAltText: parsed.data.imageAltText,
         status: "PENDING_DM_REVIEW",
+        campaignId: context.campaignId,
+        characterId: context.characterId,
         submittedAt: new Date(),
         reviewedAt: null,
         reviewedByUserId: null,
@@ -82,6 +96,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ho
       submittedById: userId,
       snapshot: homebrewSubmissionSnapshot(next)
     });
+    if (context.campaignId) {
+      await ensureApprovalRequest(tx, {
+        campaignId: context.campaignId,
+        homebrewId: next.id,
+        requestNote: "Revised submission returned for DM approval."
+      });
+      await logApprovalActivity(tx, {
+        campaignId: context.campaignId,
+        actorId: userId,
+        type: "HOMEBREW_RESUBMITTED",
+        metadata: { homebrewId: next.id, title: next.title, contentType: next.type, characterId: context.characterId }
+      });
+    }
     return tx.homebrewContent.findUniqueOrThrow({
       where: { id: next.id },
       include: { revisions: { orderBy: { revisionNumber: "desc" }, take: 1 } }

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { itemSystemPrompt } from "@/lib/ai/prompts";
 import { getOpenAIClient, openAIModel } from "@/lib/ai/openai";
 import { authOptions } from "@/lib/auth/options";
+import { deriveSubmissionContext, ensureApprovalRequest, logApprovalActivity } from "@/lib/approval-lifecycle";
 import { requireCampaignMember } from "@/lib/campaign-auth";
 import { slugForHomebrew } from "@/lib/homebrew";
 import { createHomebrewRevision, homebrewSubmissionSnapshot } from "@/lib/homebrew-submissions";
@@ -53,14 +54,20 @@ export async function POST(request: Request) {
     attunementRequired: Boolean(formatted.attunementRequired)
   });
   const title = String(formatted.name || "Custom Item");
-  const homebrew = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const context = await deriveSubmissionContext(tx, {
+      userId,
+      characterId: parsed.data.characterId,
+      campaignId: parsed.data.campaignId,
+      submitForReview: parsed.data.submitForReview
+    });
     const created = await tx.homebrewContent.create({
       data: {
         type: "CUSTOM_ITEM",
         title,
         slug: slugForHomebrew(title),
         summary: String(formatted.description || parsed.data.idea).slice(0, 500),
-        body: { ...formatted, characterId: parsed.data.characterId },
+        body: { ...formatted, characterId: context.characterId },
         rulesResult: rules,
         rarity: String(formatted.rarity || rules.rarity),
         professionRequirements: Array.isArray(formatted.professionRequirements) ? formatted.professionRequirements : [],
@@ -68,9 +75,9 @@ export async function POST(request: Request) {
         imageAltText: formatted.imageAltText ? String(formatted.imageAltText) : undefined,
         generatedByAi: true,
         status: parsed.data.submitForReview ? "PENDING_DM_REVIEW" : "DRAFT",
-        visibility: parsed.data.campaignId ? "CAMPAIGN_ONLY" : "PRIVATE_USER",
-        campaignId: parsed.data.campaignId,
-        characterId: parsed.data.characterId,
+        visibility: context.campaignId ? "CAMPAIGN_ONLY" : "PRIVATE_USER",
+        campaignId: context.campaignId,
+        characterId: context.characterId,
         submittedAt: parsed.data.submitForReview ? new Date() : undefined,
         authorId: userId
       }
@@ -80,8 +87,25 @@ export async function POST(request: Request) {
       submittedById: userId,
       snapshot: homebrewSubmissionSnapshot(created)
     });
+    if (parsed.data.submitForReview && context.campaignId) {
+      await ensureApprovalRequest(tx, {
+        campaignId: context.campaignId,
+        homebrewId: created.id,
+        requestNote: "AI-generated custom item submitted for DM approval."
+      });
+      await logApprovalActivity(tx, {
+        campaignId: context.campaignId,
+        actorId: userId,
+        type: "HOMEBREW_SUBMITTED",
+        metadata: { homebrewId: created.id, title: created.title, contentType: created.type, characterId: context.characterId, generatedByAi: true }
+      });
+    }
     return tx.homebrewContent.findUniqueOrThrow({ where: { id: created.id } });
+  }).then((homebrew) => ({ homebrew })).catch((error) => {
+    const message = error instanceof Error ? error.message : "Submission Failed";
+    return { error: message };
   });
+  if ("error" in result) return NextResponse.json({ error: result.error || "Submission Failed" }, { status: 400 });
 
-  return NextResponse.json({ formatted, rules, homebrew, approvalRequired: true });
+  return NextResponse.json({ formatted, rules, homebrew: result.homebrew, approvalRequired: true });
 }

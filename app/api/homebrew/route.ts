@@ -2,6 +2,7 @@ import { ContentType, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserId } from "@/lib/auth/session";
+import { deriveSubmissionContext, ensureApprovalRequest, logApprovalActivity } from "@/lib/approval-lifecycle";
 import { requireCampaignMember } from "@/lib/campaign-auth";
 import { slugForHomebrew } from "@/lib/homebrew";
 import { createHomebrewRevision, homebrewSubmissionSnapshot } from "@/lib/homebrew-submissions";
@@ -10,7 +11,7 @@ import { validateItemPower } from "@/lib/rules/items";
 import { calculateInfusedSpell, deriveTierFromMana } from "@/lib/rules/spells";
 
 const schema = z.object({
-  type: z.enum(["CUSTOM_SPELL", "CUSTOM_ITEM", "CRAFTING_RECIPE", "MONSTER_NPC", "PROFESSION_PERK", "MAGICAL_DISCIPLINE"]),
+  type: z.enum(["CUSTOM_SPELL", "CUSTOM_ITEM", "CRAFTING_RECIPE", "MONSTER_NPC", "PROFESSION_PERK", "MAGICAL_DISCIPLINE", "TRAIT", "AFFINITY", "COMPANION", "UNDEAD_SERVANT", "HOMEBREW_ABILITY"]),
   title: z.string().min(2).max(160),
   summary: z.string().max(500).optional(),
   campaignId: z.string().cuid().optional(),
@@ -59,14 +60,20 @@ export async function POST(request: Request) {
   }
 
   const rulesResult = rulesFor(parsed.data);
-  const homebrew = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const context = await deriveSubmissionContext(tx, {
+      userId,
+      characterId: parsed.data.characterId,
+      campaignId: parsed.data.campaignId,
+      submitForReview: parsed.data.submitForReview
+    });
     const created = await tx.homebrewContent.create({
       data: {
         type: parsed.data.type as ContentType,
         title: parsed.data.title,
         slug: slugForHomebrew(parsed.data.title),
         summary: parsed.data.summary,
-        body: { ...parsed.data.body, characterId: parsed.data.characterId } as Prisma.InputJsonValue,
+        body: { ...parsed.data.body, characterId: context.characterId } as Prisma.InputJsonValue,
         rulesResult: rulesResult as Prisma.InputJsonValue,
         rarity: parsed.data.rarity,
         discipline: parsed.data.discipline,
@@ -76,9 +83,9 @@ export async function POST(request: Request) {
         imageAltText: parsed.data.imageAltText,
         generatedByAi: parsed.data.generatedByAi,
         status: parsed.data.submitForReview ? "PENDING_DM_REVIEW" : "DRAFT",
-        visibility: parsed.data.campaignId ? "CAMPAIGN_ONLY" : "PRIVATE_USER",
-        campaignId: parsed.data.campaignId,
-        characterId: parsed.data.characterId,
+        visibility: context.campaignId ? "CAMPAIGN_ONLY" : "PRIVATE_USER",
+        campaignId: context.campaignId,
+        characterId: context.characterId,
         submittedAt: parsed.data.submitForReview ? new Date() : undefined,
         authorId: userId
       }
@@ -88,8 +95,26 @@ export async function POST(request: Request) {
       submittedById: userId,
       snapshot: homebrewSubmissionSnapshot(created) as Prisma.InputJsonValue
     });
+    if (parsed.data.submitForReview && context.campaignId) {
+      await ensureApprovalRequest(tx, {
+        campaignId: context.campaignId,
+        homebrewId: created.id,
+        requestNote: `${created.type.replace(/_/g, " ")} submitted for DM approval.`
+      });
+      await logApprovalActivity(tx, {
+        campaignId: context.campaignId,
+        actorId: userId,
+        type: "HOMEBREW_SUBMITTED",
+        metadata: { homebrewId: created.id, title: created.title, contentType: created.type, characterId: context.characterId }
+      });
+    }
     return tx.homebrewContent.findUniqueOrThrow({ where: { id: created.id } });
+  }).then((homebrew) => ({ homebrew })).catch((error) => {
+    const message = error instanceof Error ? error.message : "Submission failed.";
+    return { error: message };
   });
 
-  return NextResponse.json({ homebrew }, { status: 201 });
+  if ("error" in result) return NextResponse.json({ error: result.error || "Submission Failed" }, { status: 400 });
+
+  return NextResponse.json({ homebrew: result.homebrew }, { status: 201 });
 }

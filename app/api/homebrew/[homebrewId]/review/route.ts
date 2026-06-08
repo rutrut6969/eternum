@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createActivity } from "@/lib/activity";
+import { integrateApprovedHomebrew, logApprovalActivity, updateApprovalRequestReview } from "@/lib/approval-lifecycle";
 import { getCurrentUserId } from "@/lib/auth/session";
 import { requireCampaignDm } from "@/lib/campaign-auth";
 import { prisma } from "@/lib/prisma";
@@ -12,10 +12,6 @@ const schema = z.object({
   action: z.enum(["approve_private", "approve_public", "reject", "request_edits", "archive"]),
   note: z.string().max(2000).optional()
 });
-
-function appendJson(current: Prisma.JsonValue, value: unknown) {
-  return (Array.isArray(current) ? [...current, value] : [value]) as Prisma.InputJsonValue;
-}
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ homebrewId: string }> }) {
   const userId = await getCurrentUserId();
@@ -72,68 +68,34 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ho
       feedback: parsed.data.note?.trim() || null,
       reviewedById: userId
     });
-
+    await updateApprovalRequestReview(tx, {
+      homebrewId: content.id,
+      campaignId: content.campaignId!,
+      status,
+      reviewerId: userId,
+      reviewNote: parsed.data.note?.trim() || null
+    });
     if (parsed.data.action === "approve_private" || parsed.data.action === "approve_public") {
-      const body = content.body && typeof content.body === "object" && !Array.isArray(content.body) ? content.body : {};
-      const characterId = content.characterId || ("characterId" in body ? String(body.characterId ?? "") : "");
-      if (characterId) {
-        const character = await tx.character.findUnique({ where: { id: characterId } });
-        if (character) {
-          const card = {
-            id: content.id,
-            name: content.title,
-            summary: content.summary,
-            rarity: content.rarity,
-            discipline: content.discipline,
-            rulesResult: content.rulesResult,
-            body: content.body,
-            status,
-            approvedAt: new Date().toISOString()
-          };
-          if (content.type === "CUSTOM_SPELL") {
-            await tx.character.update({ where: { id: character.id }, data: { customSpells: appendJson(character.customSpells, card) } });
-            await tx.characterMilestone.create({
-              data: {
-                characterId: character.id,
-                campaignId: content.campaignId,
-                type: "SPELL_LEARNED",
-                title: `${content.title} approved`,
-                metadata: { homebrewId: content.id, status }
-              }
-            });
-          }
-          if (content.type === "CUSTOM_ITEM") {
-            await tx.character.update({
-              where: { id: character.id },
-              data: {
-                craftedItems: appendJson(character.craftedItems, card),
-                inventory: appendJson(character.inventory, { ...card, source: "homebrew", quantity: 1, equipped: false })
-              }
-            });
-            await tx.characterMilestone.create({
-              data: {
-                characterId: character.id,
-                campaignId: content.campaignId,
-                type: "ITEM_CRAFTED",
-                title: `${content.title} approved`,
-                metadata: { homebrewId: content.id, status }
-              }
-            });
-          }
-        }
-      }
+      await integrateApprovedHomebrew(tx, { homebrewId: content.id, approvedStatus: status });
     }
-    return next;
-  });
-
-  if (parsed.data.action === "approve_private" || parsed.data.action === "approve_public") {
-    await createActivity({
+    const activityType =
+      parsed.data.action === "approve_private" || parsed.data.action === "approve_public"
+        ? parsed.data.action === "approve_public"
+          ? "HOMEBREW_PUBLISHED"
+          : "HOMEBREW_APPROVED"
+        : parsed.data.action === "request_edits"
+          ? "HOMEBREW_CHANGES_REQUESTED"
+          : parsed.data.action === "reject"
+            ? "HOMEBREW_DENIED"
+            : "HOMEBREW_DENIED";
+    await logApprovalActivity(tx, {
       campaignId: content.campaignId,
       actorId: userId,
-      type: parsed.data.action === "approve_public" ? "HOMEBREW_PUBLISHED" : "HOMEBREW_APPROVED",
-      metadata: { homebrewId: content.id, title: content.title, contentType: content.type, status }
+      type: activityType,
+      metadata: { homebrewId: content.id, title: content.title, contentType: content.type, status, feedback: parsed.data.note?.trim() || null } as Prisma.InputJsonValue
     });
-  }
+    return next;
+  });
 
   return NextResponse.json({ homebrew: updated });
 }
