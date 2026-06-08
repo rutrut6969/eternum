@@ -79,6 +79,9 @@ AI can assist creativity, but the in-house rules engine owns final numbers, cost
 - Maps/VTT controls should be visible from the campaign workspace even while full VTT rendering, combat automation, fog, lighting, and player view remain future work.
 - Campaign cards should distinguish prep/admin manager entry points from live play/VTT entry points.
 - Map editor features should keep canonical geometry in `MapLayer.data`; editor UI may add selection, movement, resizing, rotation, history, viewport, and styling, but should not flatten editable maps into images.
+- Map editing should use a dedicated full-screen sandbox shell when a map is open for editing. The editor owns its own top bar, tool rail, canvas viewport, inspector, status bar, pan/zoom state, and body scroll locking.
+- Canvas wheel events must be captured inside the editor with non-passive handling so zooming the map does not scroll the page. Wheel outside the editor can behave normally.
+- Map object manipulation should use pointer capture and explicit interaction state so selection, dragging, panning, marquee selection, resizing, and placement do not conflict.
 - Dice logs, activity feeds, approvals, notifications, and session logs should use internal scroll regions after a short visible list so pages do not grow without bound.
 - Handouts and player notes should be designed as live-table objects with visibility controls rather than loose public text.
 
